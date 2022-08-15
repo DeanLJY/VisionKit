@@ -161,4 +161,44 @@ func init() {
 				return
 			}
 			item := dataset.GetItem(itemKey)
-		
+			if item == nil {
+				http.Error(w, "no such item", 404)
+				return
+			}
+			f(w, r, dataset, item)
+		}
+	}
+
+	Router.HandleFunc("/datasets/{ds_id}/items/{item_key}", handleItem(func(w http.ResponseWriter, r *http.Request, dataset *DBDataset, item *DBItem) {
+		skyhook.JsonResponse(w, item)
+	})).Methods("GET")
+
+	Router.HandleFunc("/datasets/{ds_id}/items/{item_key}", handleItem(func(w http.ResponseWriter, r *http.Request, dataset *DBDataset, item *DBItem) {
+		item.Delete()
+	})).Methods("DELETE")
+
+	Router.HandleFunc("/datasets/{ds_id}/items/{item_key}/get", handleItem(func(w http.ResponseWriter, r *http.Request, dataset *DBDataset, item *DBItem) {
+		r.ParseForm()
+		format := r.Form.Get("format")
+
+		if format == "meta" {
+			metadata := item.DecodeMetadata()
+			skyhook.JsonResponse(w, metadata)
+			return
+		}
+
+		item.Handle(format, w, r)
+	}))
+
+	Router.HandleFunc("/datasets/{ds_id}/items/{item_key}/get-video-frame", handleItem(func(w http.ResponseWriter, r *http.Request, dataset *DBDataset, item *DBItem) {
+		r.ParseForm()
+		frameIdx := skyhook.ParseInt(r.Form.Get("idx"))
+
+		if dataset.DataType != skyhook.VideoType {
+			http.Error(w, "dataset is not video type", 404)
+			return
+		}
+
+		item.Load()
+		videoSpec := skyhook.DataSpecs[skyhook.VideoType].(skyhook.VideoDataSpec)
+		imageSpec := skyhook.DataSpecs[skyh
