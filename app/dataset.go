@@ -112,4 +112,53 @@ func init() {
 	}).Methods("GET")
 
 	Router.HandleFunc("/datasets/{ds_id}/items", func(w http.ResponseWriter, r *http.Request) {
-		dsID := skyhook
+		dsID := skyhook.ParseInt(mux.Vars(r)["ds_id"])
+		r.ParseForm()
+		key := r.Form.Get("key")
+		ext := r.Form.Get("ext")
+		format := r.Form.Get("format")
+		metadata := r.Form.Get("metadata")
+		provider := r.Form.Get("provider")
+		providerInfo := r.Form.Get("provider_info")
+		log.Printf("add item %s to dataset %d", key, dsID)
+
+		dataset := GetDataset(dsID)
+		if dataset == nil {
+			http.Error(w, "no such dataset", 404)
+			return
+		}
+
+		item := skyhook.Item{
+			Key: key,
+			Ext: ext,
+			Format: format,
+			Metadata: metadata,
+		}
+		if provider != "" {
+			item.Provider = new(string)
+			*item.Provider = provider
+			item.ProviderInfo = new(string)
+			*item.ProviderInfo = providerInfo
+		}
+
+		item_, err := dataset.AddItem(item)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		skyhook.JsonResponse(w, item_)
+	}).Methods("POST")
+
+	// handle endpoints starting with /datasets/{ds_id}/items/{item_key}
+	handleItem := func(f func(http.ResponseWriter, *http.Request, *DBDataset, *DBItem)) func(w http.ResponseWriter, r *http.Request) {
+		return func(w http.ResponseWriter, r *http.Request) {
+			dsID := skyhook.ParseInt(mux.Vars(r)["ds_id"])
+			itemKey := mux.Vars(r)["item_key"]
+
+			dataset := GetDataset(dsID)
+			if dataset == nil {
+				http.Error(w, "no such dataset", 404)
+				return
+			}
+			item := dataset.GetItem(itemKey)
+		
