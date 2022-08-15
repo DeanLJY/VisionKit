@@ -86,4 +86,65 @@ func GetAnnotateDataset(id int) *DBAnnotateDataset {
 	rows := db.Query(AnnotateDatasetQuery + " WHERE a.id = ?", id)
 	annosets := annotateDatasetListHelper(rows)
 	if len(annosets) == 1 {
-		return annosets[
+		return annosets[0]
+	} else {
+		return nil
+	}
+}
+
+func (s *DBAnnotateDataset) Load() {
+	if s.loaded {
+		return
+	}
+
+	s.Dataset = GetDataset(s.Dataset.ID).Dataset
+	s.InputDatasets = make([]skyhook.Dataset, len(s.Inputs))
+	for i, input := range s.Inputs {
+		ds, err := ExecParentToDataset(input)
+		if err != nil {
+			continue
+		}
+		s.InputDatasets[i] = ds.Dataset
+	}
+	s.loaded = true
+}
+
+// samples a key that is present in all input datasets but not yet labeled in this annotate dataset
+// TODO: have sampler object so that hash tables can be stored in memory instead of loaded from db each time
+func (s *DBAnnotateDataset) SampleMissingKey() string {
+	var keys map[string]bool
+	for _, parent := range s.Inputs {
+		ds, err := ExecParentToDataset(parent)
+		if err != nil {
+			// TODO: probably want to handle this error somehow
+			continue
+		}
+		items := ds.ListItems()
+		curKeys := make(map[string]bool)
+		for _, item := range items {
+			curKeys[item.Key] = true
+		}
+		if keys == nil {
+			keys = curKeys
+		} else {
+			for key := range keys {
+				if !curKeys[key] {
+					delete(keys, key)
+				}
+			}
+		}
+	}
+
+	items := (&DBDataset{Dataset: s.Dataset}).ListItems()
+	for _, item := range items {
+		delete(keys, item.Key)
+	}
+
+	var keyList []string
+	for key := range keys {
+		keyList = append(keyList, key)
+	}
+	if len(keyList) == 0 {
+		return ""
+	}
+	return keyList[rand.Intn(len(
