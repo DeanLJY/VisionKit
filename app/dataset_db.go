@@ -41,4 +41,49 @@ func ListDatasets() []*DBDataset {
 }
 
 func GetDataset(id int) *DBDataset {
-	rows := db.Query(Datase
+	rows := db.Query(DatasetQuery + " WHERE id = ?", id)
+	datasets := datasetListHelper(rows)
+	if len(datasets) == 1 {
+		return datasets[0]
+	} else {
+		return nil
+	}
+}
+
+func FindDataset(hash string) *DBDataset {
+	rows := db.Query(DatasetQuery + " WHERE hash = ?", hash)
+	datasets := datasetListHelper(rows)
+	if len(datasets) == 1 {
+		return datasets[0]
+	} else {
+		return nil
+	}
+}
+
+const AnnotateDatasetQuery = "SELECT a.id, d.id, d.name, d.type, d.data_type, a.inputs, a.tool, a.params FROM annotate_datasets AS a LEFT JOIN datasets AS d ON a.dataset_id = d.id"
+
+func annotateDatasetListHelper(rows *Rows) []*DBAnnotateDataset {
+	annosets := []*DBAnnotateDataset{}
+	for rows.Next() {
+		var s DBAnnotateDataset
+		var inputsRaw string
+		rows.Scan(&s.ID, &s.Dataset.ID, &s.Dataset.Name, &s.Dataset.Type, &s.Dataset.DataType, &inputsRaw, &s.Tool, &s.Params)
+		skyhook.JsonUnmarshal([]byte(inputsRaw), &s.Inputs)
+		if s.Inputs == nil {
+			s.Inputs = []skyhook.ExecParent{}
+		}
+		annosets = append(annosets, &s)
+	}
+	return annosets
+}
+
+func ListAnnotateDatasets() []*DBAnnotateDataset {
+	rows := db.Query(AnnotateDatasetQuery)
+	return annotateDatasetListHelper(rows)
+}
+
+func GetAnnotateDataset(id int) *DBAnnotateDataset {
+	rows := db.Query(AnnotateDatasetQuery + " WHERE a.id = ?", id)
+	annosets := annotateDatasetListHelper(rows)
+	if len(annosets) == 1 {
+		return annosets[
