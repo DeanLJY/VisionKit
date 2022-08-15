@@ -196,4 +196,51 @@ func (ds *DBDataset) getDB() *Database {
 			id INTEGER PRIMARY KEY ASC,
 			name TEXT,
 			-- 'data' or 'computed'
-			type TE
+			type TEXT,
+			data_type TEXT,
+			metadata TEXT DEFAULT '',
+			-- only set if computed
+			hash TEXT
+		)`)
+		db.Exec(
+			"INSERT OR REPLACE INTO datasets (id, name, type, data_type, metadata, hash) VALUES (1, ?, ?, ?, ?, ?)",
+			ds.Name, ds.Type, ds.DataType, ds.Metadata, ds.Hash,
+		)
+	})
+}
+
+func (ds *DBDataset) ListItems() []*DBItem {
+	db := ds.getDB()
+	rows := db.Query(ItemQuery + " ORDER BY k")
+	items := itemListHelper(rows)
+	// populate dataset
+	for _, item := range items {
+		item.Dataset = ds.Dataset
+		item.loaded = true
+	}
+	return items
+}
+
+func (ds *DBDataset) AddItem(item skyhook.Item) (*DBItem, error) {
+	db := ds.getDB()
+	// We use underlying Exec directly here since it is expected that we may encounter
+	// a unique key constraint error.
+	err := func() error {
+		db.mu.Lock()
+		defer db.mu.Unlock()
+		_, err := db.db.Exec(
+			"INSERT INTO items (k, ext, format, metadata, provider, provider_info) VALUES (?, ?, ?, ?, ?, ?)",
+			item.Key, item.Ext, item.Format, item.Metadata, item.Provider, item.ProviderInfo,
+		)
+		return err
+	}()
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "unique") {
+			return nil, fmt.Errorf("item with key %s already exists in the dataset", item.Key)
+		}
+		return nil, err
+	}
+	return ds.GetItem(item.Key), nil
+}
+
+func (ds *DBDataset) GetItem(key string) *DBI
