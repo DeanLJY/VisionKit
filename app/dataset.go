@@ -201,4 +201,18 @@ func init() {
 
 		item.Load()
 		videoSpec := skyhook.DataSpecs[skyhook.VideoType].(skyhook.VideoDataSpec)
-		imageSpec := skyhook.DataSpecs[skyh
+		imageSpec := skyhook.DataSpecs[skyhook.ImageType]
+		reader := videoSpec.ReadSlice("mp4", item.DecodeMetadata(), item.Fname(), frameIdx, frameIdx+1)
+		defer reader.Close()
+		data, err := reader.Read(1)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error reading frame: %v", err), 400)
+			return
+		}
+		images := data.([]skyhook.Image)
+		w.Header().Set("Content-Type", "image/jpeg")
+		if err := imageSpec.Write(images[0], "jpeg", nil, w); err != nil {
+			panic(err)
+		}
+	}))
+}
