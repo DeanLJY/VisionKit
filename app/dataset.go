@@ -66,4 +66,50 @@ func init() {
 	}).Methods("POST")
 
 	Router.HandleFunc("/datasets/{ds_id}", func(w http.ResponseWriter, r *http.Request) {
-		dsID := skyhoo
+		dsID := skyhook.ParseInt(mux.Vars(r)["ds_id"])
+		dataset := GetDataset(dsID)
+		if dataset == nil {
+			http.Error(w, "no such dataset", 404)
+			return
+		}
+		skyhook.JsonResponse(w, dataset)
+	}).Methods("GET")
+
+	Router.HandleFunc("/datasets/{ds_id}", func(w http.ResponseWriter, r *http.Request) {
+		dsID := skyhook.ParseInt(mux.Vars(r)["ds_id"])
+		dataset := GetDataset(dsID)
+		if dataset == nil {
+			http.Error(w, "no such dataset", 404)
+			return
+		}
+
+		var request DatasetUpdate
+		if err := skyhook.ParseJsonRequest(w, r, &request); err != nil {
+			return
+		}
+
+		dataset.Update(request)
+	}).Methods("POST")
+
+	Router.HandleFunc("/datasets/{ds_id}", func(w http.ResponseWriter, r *http.Request) {
+		dsID := skyhook.ParseInt(mux.Vars(r)["ds_id"])
+		dataset := GetDataset(dsID)
+		if dataset == nil {
+			http.Error(w, "no such dataset", 404)
+			return
+		}
+		dataset.Delete()
+	}).Methods("DELETE")
+
+	Router.HandleFunc("/datasets/{ds_id}/items", func(w http.ResponseWriter, r *http.Request) {
+		dsID := skyhook.ParseInt(mux.Vars(r)["ds_id"])
+		dataset := GetDataset(dsID)
+		if dataset == nil {
+			http.Error(w, "no such dataset", 404)
+			return
+		}
+		skyhook.JsonResponse(w, dataset.ListItems())
+	}).Methods("GET")
+
+	Router.HandleFunc("/datasets/{ds_id}/items", func(w http.ResponseWriter, r *http.Request) {
+		dsID := skyhook
