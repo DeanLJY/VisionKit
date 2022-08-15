@@ -147,4 +147,53 @@ func (s *DBAnnotateDataset) SampleMissingKey() string {
 	if len(keyList) == 0 {
 		return ""
 	}
-	return keyList[rand.Intn(len(
+	return keyList[rand.Intn(len(keyList))]
+}
+
+type AnnotateDatasetUpdate struct {
+	Tool *string
+	Params *string
+}
+
+func (s *DBAnnotateDataset) Update(req AnnotateDatasetUpdate) {
+	if req.Tool != nil {
+		db.Exec("UPDATE annotate_datasets SET tool = ? WHERE id = ?", *req.Tool, s.ID)
+	}
+	if req.Params != nil {
+		db.Exec("UPDATE annotate_datasets SET params = ? WHERE id = ?", *req.Params, s.ID)
+	}
+}
+
+func (s *DBAnnotateDataset) Delete() {
+	db.Exec("DELETE FROM annotate_datasets WHERE id = ?", s.ID)
+}
+
+const ItemQuery = "SELECT k, ext, format, metadata, provider, provider_info FROM items"
+
+func itemListHelper(rows *Rows) []*DBItem {
+	var items []*DBItem
+	for rows.Next() {
+		var item DBItem
+		rows.Scan(&item.Key, &item.Ext, &item.Format, &item.Metadata, &item.Provider, &item.ProviderInfo)
+		items = append(items, &item)
+	}
+	return items
+}
+
+func (ds *DBDataset) getDB() *Database {
+	return GetCachedDB(ds.DBFname(), func(db *Database) {
+		db.Exec(`CREATE TABLE IF NOT EXISTS items (
+			-- item key
+			k TEXT PRIMARY KEY,
+			ext TEXT,
+			format TEXT,
+			metadata TEXT,
+			-- set if LoadData call should go through non-default method, else NULL
+			provider TEXT,
+			provider_info TEXT
+		)`)
+		db.Exec(`CREATE TABLE IF NOT EXISTS datasets (
+			id INTEGER PRIMARY KEY ASC,
+			name TEXT,
+			-- 'data' or 'computed'
+			type TE
