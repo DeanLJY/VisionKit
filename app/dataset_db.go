@@ -243,4 +243,57 @@ func (ds *DBDataset) AddItem(item skyhook.Item) (*DBItem, error) {
 	return ds.GetItem(item.Key), nil
 }
 
-func (ds *DBDataset) GetItem(key string) *DBI
+func (ds *DBDataset) GetItem(key string) *DBItem {
+	db := ds.getDB()
+	rows := db.Query(ItemQuery + " WHERE k = ?", key)
+	items := itemListHelper(rows)
+	if len(items) == 1 {
+		item := items[0]
+		item.Dataset = ds.Dataset
+		item.loaded = true
+		return item
+	} else {
+		return nil
+	}
+}
+
+func (ds *DBDataset) WriteItem(key string, data interface{}, metadata skyhook.DataMetadata) (*DBItem, error) {
+	// TODO: might want to write the item before updating database
+	ext, format := ds.DataSpec().GetDefaultExtAndFormat(data, metadata)
+	item, err := ds.AddItem(skyhook.Item{
+		Key: key,
+		Ext: ext,
+		Format: format,
+		Metadata: string(skyhook.JsonMarshal(metadata)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = item.UpdateData(data, metadata)
+	if err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func (ds *DBDataset) Delete() {
+	ds.Clear()
+	DeleteReferencesToDataset(ds)
+	db.Exec("DELETE FROM datasets WHERE id = ?", ds.ID)
+	db.Exec("DELETE FROM exec_ds_refs WHERE dataset_id = ?", ds.ID)
+}
+
+// Clear the dataset without deleting it.
+func (ds *DBDataset) Clear() {
+	ds.Dataset.Remove()
+	UncacheDB(ds.DBFname())
+}
+
+func (ds *DBDataset) AddExecRef(nodeID int) {
+	db.Exec("INSERT OR IGNORE INTO exec_ds_refs (node_id, dataset_id) VALUES (?, ?)", nodeID, ds.ID)
+}
+
+func (ds *DBDataset) DeleteExecRef(nodeID int) {
+	db.Exec("DELETE FROM exec_ds_refs WHERE node_id = ? AND dataset_id = ?", nodeID, ds.ID)
+
+	// if data
