@@ -296,4 +296,55 @@ func (ds *DBDataset) AddExecRef(nodeID int) {
 func (ds *DBDataset) DeleteExecRef(nodeID int) {
 	db.Exec("DELETE FROM exec_ds_refs WHERE node_id = ? AND dataset_id = ?", nodeID, ds.ID)
 
-	// if data
+	// if dataset no longer has any references, then we should delete the dataset
+	var count int
+	db.QueryRow("SELECT COUNT(*) from exec_ds_refs WHERE dataset_id = ?", ds.ID).Scan(&count)
+	if count > 0 {
+		return
+	}
+	log.Printf("[dataset %d-%s] removing empty dataset", ds.ID, ds.Name)
+	ds.Delete()
+}
+
+func (ds *DBDataset) SetDone(done bool) {
+	db.Exec("UPDATE datasets SET done = ? WHERE id = ?", done, ds.ID)
+}
+
+func (item *DBItem) Delete() {
+	db := (&DBDataset{Dataset: item.Dataset}).getDB()
+	db.Exec("DELETE FROM items WHERE k = ?", item.Key)
+	item.Item.Remove()
+}
+
+func (item *DBItem) Load() {
+	if item.loaded {
+		return
+	}
+	item.Dataset = GetDataset(item.Dataset.ID).Dataset
+	item.loaded = true
+}
+
+// Set metadata based on the file.
+func (item *DBItem) SetMetadataFromFile() error {
+	item.Load()
+	fname := item.Fname()
+	if fname == "" {
+		return fmt.Errorf("could not set metadata from file in dataset not supporting filename")
+	}
+	spec := item.DataSpec()
+	spec_, ok := spec.(skyhook.MetadataFromFileDataSpec)
+	if !ok {
+		return fmt.Errorf("MetadataFromFile not supported for type %s", item.Dataset.DataType)
+	}
+	format, metadata, err := spec_.GetMetadataFromFile(fname)
+	if err != nil {
+		return err
+	}
+	item.SetMetadata(format, metadata)
+	return nil
+}
+
+func (item *DBItem) SetMetadata(format string, metadata skyhook.DataMetadata) {
+	item.Load()
+	item.Format = format
+	item.Meta
