@@ -347,4 +347,31 @@ func (item *DBItem) SetMetadataFromFile() error {
 func (item *DBItem) SetMetadata(format string, metadata skyhook.DataMetadata) {
 	item.Load()
 	item.Format = format
-	item.Meta
+	item.Metadata = string(skyhook.JsonMarshal(metadata))
+	db := (&DBDataset{Dataset: item.Dataset}).getDB()
+	db.Exec("UPDATE items SET format = ?, metadata = ? WHERE k = ?", item.Format, item.Metadata, item.Key)
+}
+
+func NewDataset(name string, t string, dataType skyhook.DataType, hash *string) *DBDataset {
+	done := t != "computed"
+	res := db.Exec("INSERT INTO datasets (name, type, data_type, hash, done) VALUES (?, ?, ?, ?, ?)", name, t, dataType, hash, done)
+	id := res.LastInsertId()
+	log.Printf("[dataset %d-%s] created new dataset, data_type=%v", id, name, dataType)
+	return GetDataset(id)
+}
+
+type DatasetUpdate struct {
+	Name *string
+	Metadata *string
+}
+
+func (ds *DBDataset) Update(req DatasetUpdate) {
+	if req.Name != nil {
+		db.Exec("UPDATE datasets SET name = ? WHERE id = ?", *req.Name, ds.ID)
+		ds.Name = *req.Name
+	}
+	if req.Metadata != nil {
+		db.Exec("UPDATE datasets SET metadata = ? WHERE id = ?", *req.Metadata, ds.ID)
+		ds.Metadata = *req.Metadata
+	}
+}
