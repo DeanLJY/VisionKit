@@ -76,4 +76,50 @@ func InitDB(init bool) {
 		)`)
 
 		// add missing pytorch components
-		componentPath := "python/skyhook/pytorch/com
+		componentPath := "python/skyhook/pytorch/components/"
+		files, err := ioutil.ReadDir(componentPath)
+		if err != nil {
+			panic(err)
+		}
+		for _, fi := range files {
+			if !strings.HasSuffix(fi.Name(), ".json") {
+				continue
+			}
+			id := strings.Split(fi.Name(), ".json")[0]
+			bytes, err := ioutil.ReadFile(filepath.Join(componentPath, fi.Name()))
+			if err != nil {
+				panic(err)
+			}
+			db.Exec("INSERT OR REPLACE INTO pytorch_components (id, params) VALUES (?, ?)", id, string(bytes))
+		}
+
+		// add missing pytorch archs
+		archPath := "exec_ops/pytorch/archs/"
+		files, err = ioutil.ReadDir(archPath)
+		if err != nil {
+			panic(err)
+		}
+		for _, fi := range files {
+			if !strings.HasSuffix(fi.Name(), ".json") {
+				continue
+			}
+			id := strings.Split(fi.Name(), ".json")[0]
+			bytes, err := ioutil.ReadFile(filepath.Join(archPath, fi.Name()))
+			if err != nil {
+				panic(err)
+			}
+			db.Exec("INSERT OR REPLACE INTO pytorch_archs (id, params) VALUES (?, ?)", id, string(bytes))
+		}
+
+		// add default workspace if it doesn't exist
+		var count int
+		db.QueryRow("SELECT COUNT(*) FROM workspaces WHERE name = ?", "default").Scan(&count)
+		if count == 0 {
+			db.Exec("INSERT INTO workspaces (name) VALUES (?)", "default")
+		}
+	}
+
+	// now run some database cleanup steps
+
+	// mark jobs that are still running as error
+	db.Exec("UPDATE jobs SET error = 'terminat
