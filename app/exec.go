@@ -44,4 +44,55 @@ func (node *DBExecNode) GetComputedKeys() map[string]bool {
 		for _, item := range ds.ListItems() {
 			skItems = append(skItems, item.Item)
 		}
-		outputItems[name] = [][]skyhook.It
+		outputItems[name] = [][]skyhook.Item{skItems}
+	}
+	groupedItems := exec_ops.GroupItems(outputItems)
+	keySet := make(map[string]bool)
+	for key := range groupedItems {
+		keySet[key] = true
+	}
+	return keySet
+}
+
+type ExecRunOptions struct {
+	// If force, we run even if outputs were already available.
+	Force bool
+
+	// Whether to try incremental execution at this node.
+	// If false, we throw error if parent datasets are not done.
+	Incremental bool
+
+	// If set, limit execution to these keys.
+	// Only supported by incremental ops.
+	LimitOutputKeys map[string]bool
+}
+
+// A RunData provides a Run function that executes a Runnable over the specified tasks.
+type RunData struct {
+	Name string
+	Node skyhook.Runnable
+	Tasks []skyhook.ExecTask
+
+	// whether we'll be done with the node after running Tasks
+	// i.e., whether Tasks contains all pending tasks at this node
+	WillBeDone bool
+
+	// job-related things to update
+	JobOp *AppJobOp
+	ProgressJobOp *ProgressJobOp
+
+	// Saved error if any
+	Error error
+}
+
+// Create a Job for this RunData and populate JobOp/ProgressJobOp.
+func (rd *RunData) SetJob(name string, metadata string) {
+	if rd.JobOp != nil {
+		return
+	}
+
+	// initialize job
+	// if the node doesn't provide a custom JobOp, we use "consoleprogress" view
+	// otherwise the view for the job is the ExecOp's name
+	opImpl := rd.Node.GetOp()
+	nodeJobOp, nodeView := opImpl
