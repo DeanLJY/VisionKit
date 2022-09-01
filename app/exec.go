@@ -151,4 +151,51 @@ func (node *DBExecNode) PrepareRun(opts ExecRunOptions) (*RunData, error) {
 	} else {
 		done := true
 		for _, ds := range outputDatasets {
-			done = done
+			done = done && ds.Done
+		}
+		if done {
+			return nil, nil
+		}
+	}
+
+	// get parent datasets
+	// for ExecNode parents, get computed dataset
+	// in the future, we may need some recursive execution
+	parentDatasets := make(map[string][]*DBDataset)
+	parentsDone := true // whether parent datasets are fully computed
+	for name, plist := range node.Parents {
+		parentDatasets[name] = make([]*DBDataset, len(plist))
+		for i, parent := range plist {
+			if parent.Type == "n" {
+				n := GetExecNode(parent.ID)
+				dsList, _ := n.GetDatasets(false)
+				ds := dsList[parent.Name]
+				if ds == nil {
+					return nil, fmt.Errorf("dataset for parent node %s[%s] is missing", n.Name, parent.Name)
+				} else if !ds.Done && !opts.Incremental {
+					return nil, fmt.Errorf("dataset for parent node %s[%s] is not done", n.Name, parent.Name)
+				}
+				parentDatasets[name][i] = ds
+				parentsDone = parentsDone && ds.Done
+			} else {
+				parentDatasets[name][i] = GetDataset(parent.ID)
+			}
+		}
+	}
+
+	// get items in parent datasets
+	items := make(map[string][][]skyhook.Item)
+	for name, dslist := range parentDatasets {
+		items[name] = make([][]skyhook.Item, len(dslist))
+		for i, ds := range dslist {
+			var skItems []skyhook.Item
+			for _, item := range ds.ListItems() {
+				skItems = append(skItems, item.Item)
+			}
+			items[name][i] = skItems
+		}
+	}
+
+	// get tasks
+	opImpl := node.GetOp()
+	vnode := opImpl.Virtualize(no
