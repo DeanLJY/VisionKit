@@ -95,4 +95,60 @@ func (rd *RunData) SetJob(name string, metadata string) {
 	// if the node doesn't provide a custom JobOp, we use "consoleprogress" view
 	// otherwise the view for the job is the ExecOp's name
 	opImpl := rd.Node.GetOp()
-	nodeJobOp, nodeView := opImpl
+	nodeJobOp, nodeView := opImpl.GetJobOp(rd.Node)
+	jobView := "consoleprogress"
+	if nodeView != "" {
+		jobView = nodeView
+	}
+	job := NewJob(
+		fmt.Sprintf("Exec Node %s", name),
+		"execnode",
+		jobView,
+		metadata,
+	)
+
+	rd.ProgressJobOp = &ProgressJobOp{}
+	rd.JobOp = &AppJobOp{
+		Job: job,
+		TailOp: &skyhook.TailJobOp{},
+		WrappedJobOps: map[string]skyhook.JobOp{
+			"progress": rd.ProgressJobOp,
+		},
+	}
+	if nodeJobOp != nil {
+		rd.JobOp.WrappedJobOps["node"] = nodeJobOp
+	}
+	job.AttachOp(rd.JobOp)
+}
+
+// Update the AppJobOp with the saved error.
+// We don't call this in RunData.Run by default because it's possible that the
+// specified RunData.JobOp is shared across multiple Runs and shouldn't be
+// marked as completed.
+func (rd *RunData) SetDone() {
+	if rd.Error == nil {
+		rd.JobOp.SetDone(nil)
+	} else {
+		rd.JobOp.SetDone(rd.Error)
+	}
+}
+
+// Prepare to run this node.
+// Returns a RunData.
+// Or error on error.
+// Or nil RunData and error if the node is already done.
+func (node *DBExecNode) PrepareRun(opts ExecRunOptions) (*RunData, error) {
+	// create datasets for this op if needed
+	outputDatasets, _ := node.GetDatasets(true)
+
+	// if force, we clear the datasets first
+	// otherwise, check if the datasets are done already
+	if opts.Force {
+		for _, ds := range outputDatasets {
+			ds.Clear()
+			ds.SetDone(false)
+		}
+	} else {
+		done := true
+		for _, ds := range outputDatasets {
+			done = done
