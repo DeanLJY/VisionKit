@@ -198,4 +198,52 @@ func (node *DBExecNode) PrepareRun(opts ExecRunOptions) (*RunData, error) {
 
 	// get tasks
 	opImpl := node.GetOp()
-	vnode := opImpl.Virtualize(no
+	vnode := opImpl.Virtualize(node.ExecNode)
+	runnable := vnode.GetRunnable(ToSkyhookInputDatasets(parentDatasets), ToSkyhookOutputDatasets(outputDatasets))
+	tasks, err := opImpl.GetTasks(runnable, items)
+	if err != nil {
+		return nil, err
+	}
+
+	// if running incrementally, remove tasks that were already computed
+	// this is mostly so that we can see whether we will be done with this node after the current execution
+	// (i.e., we are done here if parentsDone and we execute all remaining tasks)
+	if opts.Incremental {
+		var ntasks []skyhook.ExecTask
+		completedKeys := node.GetComputedKeys()
+		for _, task := range tasks {
+			if completedKeys[task.Key] {
+				continue
+			}
+			ntasks = append(ntasks, task)
+		}
+		tasks = ntasks
+	}
+
+	// limit tasks to LimitOutputKeys if needed
+	// also determine whether this current execution will lead to all tasks being completed
+	willBeDone := true
+	if !parentsDone {
+		willBeDone = false
+	}
+	if opts.LimitOutputKeys != nil {
+		var ntasks []skyhook.ExecTask
+		for _, task := range tasks {
+			if !opts.LimitOutputKeys[task.Key] {
+				continue
+			}
+			ntasks = append(ntasks, task)
+		}
+		if len(ntasks) != len(tasks) {
+			tasks = ntasks
+			willBeDone = false
+		}
+	}
+
+	rd := &RunData{
+		Name: node.Name,
+		Node: runnable,
+		Tasks: tasks,
+		WillBeDone: willBeDone,
+	}
+	rd.SetJob(fmt.Sprintf("Exec Node %s", node.Name), fmt.Sprintf("
