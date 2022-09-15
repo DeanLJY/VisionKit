@@ -246,4 +246,43 @@ func (node *DBExecNode) PrepareRun(opts ExecRunOptions) (*RunData, error) {
 		Tasks: tasks,
 		WillBeDone: willBeDone,
 	}
-	rd.SetJob(fmt.Sprintf("Exec Node %s", node.Name), fmt.Sprintf("
+	rd.SetJob(fmt.Sprintf("Exec Node %s", node.Name), fmt.Sprintf("%d", node.ID))
+	return rd, nil
+}
+
+func (rd *RunData) Run() error {
+	name := rd.Name
+
+	// get container corresponding to rd.Node.Op
+	log.Printf("[exec-node %s] [run] acquiring container", name)
+	rd.JobOp.Update([]string{"Acquiring worker"})
+	if err := AcquireWorker(rd.JobOp); err != nil {
+		rd.Error = err
+		return err
+	}
+	defer ReleaseWorker()
+	containerInfo, err := AcquireContainer(rd.Node, rd.JobOp)
+	if err != nil {
+		rd.Error = err
+		return err
+	}
+	log.Printf("[exec-node %s] [run] ... acquired container %s at %s", name, containerInfo.UUID, containerInfo.BaseURL)
+	defer ReleaseWorker()
+
+	// we want to de-allocate the container in two cases:
+	// (1) when we return from this function
+	// (2) if user requests to stop this job
+	// we achieve this as follows:
+	// - associate cleanup func with the JobOp
+	// - on return, call AppJobOp.Cleanup to only de-allocate if it hasn't been de-allocated already
+	// this is possible because AppJobOp will take care of unsetting CleanupFunc whenever it's called
+	rd.JobOp.SetCleanupFunc(func() {
+		err := skyhook.JsonPost(Config.WorkerURL, "/container/end", skyhook.EndRequest{containerInfo.UUID}, nil)
+		if err != nil {
+			log.Printf("[exec-node %s] [run] error ending exec container: %v", name, err)
+		}
+	})
+	defer rd.JobOp.Cleanup()
+
+	nthreads := containerInfo.Parallelism
+	log.
