@@ -344,4 +344,46 @@ func (rd *RunData) Run() error {
 
 // Get some number of incremental outputs from this node.
 type IncrementalOptions struct {
-	// Number of random outputs to compute a
+	// Number of random outputs to compute at this node.
+	// Only one of Count or Keys should be specified.
+	Count int
+	// Compute outputs matching these keys.
+	Keys []string
+	// MultiExecJob to update during incremental execution.
+	// For non-incremental ancestors, we pass this JobOp to RunNode.
+	JobOp *MultiExecJobOp
+}
+func (node *DBExecNode) Incremental(opts IncrementalOptions) error {
+	isIncremental := func(node *DBExecNode) bool {
+		return node.GetOp().IsIncremental()
+	}
+
+	if !isIncremental(node) {
+		return fmt.Errorf("can only incrementally run incremental nodes")
+	} else if node.IsDone() {
+		return nil
+	}
+
+	log.Printf("[exec-node %s] [incremental] begin execution", node.Name)
+	// identify all non-incremental ancestors of this node
+	// but stop the search at ExecNodes whose outputs have already been computed
+	// we will need to run these ancestors in their entirety
+	// note: we do not need to worry about Virtualize here because we assume Virtualize and Incremental are mutually exclusive
+	var nonIncremental []*DBExecNode
+	incrementalNodes := make(map[int]*DBExecNode)
+	q := []*DBExecNode{node}
+	seen := map[int]bool{node.ID: true}
+	for len(q) > 0 {
+		cur := q[len(q)-1]
+		q = q[0:len(q)-1]
+
+		if cur.IsDone() {
+			continue
+		}
+
+		if !isIncremental(cur) {
+			nonIncremental = append(nonIncremental, cur)
+			continue
+		}
+
+		incrementa
