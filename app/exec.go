@@ -285,4 +285,63 @@ func (rd *RunData) Run() error {
 	defer rd.JobOp.Cleanup()
 
 	nthreads := containerInfo.Parallelism
-	log.
+	log.Printf("[exec-node %s] [run] running %d tasks in %d threads", name, len(rd.Tasks), nthreads)
+	rd.ProgressJobOp.SetTotal(len(rd.Tasks))
+
+	counter := 0
+	var applyErr error
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for i := 0; i < nthreads; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for !rd.JobOp.IsStopping() {
+				// get next task
+				mu.Lock()
+				if counter >= len(rd.Tasks) || applyErr != nil {
+					mu.Unlock()
+					break
+				}
+				task := rd.Tasks[counter]
+				counter++
+				mu.Unlock()
+
+				log.Printf("[exec-node %s] [run] apply on %s", name, task.Key)
+				err := skyhook.JsonPost(containerInfo.BaseURL, "/exec/task", skyhook.ExecTaskRequest{task}, nil)
+
+				if err != nil {
+					mu.Lock()
+					applyErr = err
+					mu.Unlock()
+					break
+				}
+
+				mu.Lock()
+				rd.ProgressJobOp.Increment()
+				rd.JobOp.Update([]string{fmt.Sprintf("finished applying on key [%s]", task.Key)})
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+
+	if applyErr != nil {
+		rd.Error = applyErr
+		return applyErr
+	}
+
+	// update dataset states
+	if rd.WillBeDone {
+		for _, ds := range rd.Node.OutputDatasets {
+			(&DBDataset{Dataset: ds}).SetDone(true)
+		}
+	}
+
+	log.Printf("[exec-node %s] [run] done", name)
+	return nil
+}
+
+// Get some number of incremental outputs from this node.
+type IncrementalOptions struct {
+	// Number of random outputs to compute a
