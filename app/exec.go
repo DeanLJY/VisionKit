@@ -386,4 +386,52 @@ func (node *DBExecNode) Incremental(opts IncrementalOptions) error {
 			continue
 		}
 
-		incrementa
+		incrementalNodes[cur.ID] = cur
+
+		for _, plist := range cur.Parents {
+			for _, parent := range plist {
+				if parent.Type != "n" {
+					continue
+				}
+				if seen[parent.ID] {
+					continue
+				}
+				seen[parent.ID] = true
+				parentNode := GetExecNode(parent.ID)
+				q = append(q, parentNode)
+			}
+		}
+	}
+
+	if len(nonIncremental) > 0 {
+		log.Printf("[exec-node %s] [incremental] running %d non-incremental ancestors: %v", node.Name, len(nonIncremental), nonIncremental)
+		for _, cur := range nonIncremental {
+			RunNode(cur, RunNodeOptions{
+				JobOp: opts.JobOp,
+			})
+		}
+	}
+
+	// find the output keys for the current node
+	computedOutputKeys := make(map[int][]string)
+	getKeys := func(parent skyhook.ExecParent) ([]string, bool) {
+		if parent.Type == "d" {
+			items := GetDataset(parent.ID).ListItems()
+			var keys []string
+			for _, item := range items {
+				keys = append(keys, item.Key)
+			}
+			return keys, true
+		} else if parent.Type == "n" {
+			node := GetExecNode(parent.ID)
+			if node.IsDone() {
+				datasets, _ := node.GetDatasets(false)
+				var keys []string
+				for _, item := range datasets[parent.Name].ListItems() {
+					keys = append(keys, item.Key)
+				}
+				return keys, true
+			} else if computedOutputKeys[node.ID] != nil {
+				return computedOutputKeys[node.ID], true
+			} else {
+				return nil, f
