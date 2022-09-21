@@ -434,4 +434,57 @@ func (node *DBExecNode) Incremental(opts IncrementalOptions) error {
 			} else if computedOutputKeys[node.ID] != nil {
 				return computedOutputKeys[node.ID], true
 			} else {
-				return nil, f
+				return nil, false
+			}
+		}
+		panic(fmt.Errorf("bad parent type %s", parent.Type))
+	}
+	for computedOutputKeys[node.ID] == nil {
+		for _, cur := range incrementalNodes {
+			if computedOutputKeys[cur.ID] != nil {
+				continue
+			}
+			inputs := make(map[string][][]string)
+			ready := true
+			for name, plist := range cur.Parents {
+				inputs[name] = make([][]string, len(plist))
+				for i, parent := range plist {
+					keys, ok := getKeys(parent)
+					if !ok {
+						ready = false
+						break
+					}
+					inputs[name][i] = keys
+				}
+			}
+			if !ready {
+				continue
+			}
+			outputKeys := cur.GetOp().GetOutputKeys(cur.ExecNode, inputs)
+			if outputKeys == nil {
+				outputKeys = []string{}
+			}
+			computedOutputKeys[cur.ID] = outputKeys
+		}
+	}
+
+	// what output keys haven't been computed yet at the last node?
+	allKeys := computedOutputKeys[node.ID]
+	persistedKeys := node.GetComputedKeys()
+	var missingKeys []string
+	for _, key := range allKeys {
+		if persistedKeys[key] {
+			continue
+		}
+		missingKeys = append(missingKeys, key)
+	}
+	log.Printf("[exec-node %s] [incremental] found %d total keys, %d already computed keys, and %d missing keys at this node", node.Name, len(allKeys), len(persistedKeys), len(missingKeys))
+
+	// what output keys do we want to produce at the last node?
+	wantedKeys := make(map[string]bool)
+	if opts.Count > 0 {
+		n := opts.Count
+		if len(missingKeys) < n {
+			n = len(missingKeys)
+		}
+		for _, idx := rang
