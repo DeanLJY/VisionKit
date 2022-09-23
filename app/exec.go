@@ -487,4 +487,48 @@ func (node *DBExecNode) Incremental(opts IncrementalOptions) error {
 		if len(missingKeys) < n {
 			n = len(missingKeys)
 		}
-		for _, idx := rang
+		for _, idx := range rand.Perm(len(missingKeys))[0:n] {
+			wantedKeys[missingKeys[idx]] = true
+		}
+	} else {
+		missingSet := make(map[string]bool)
+		for _, key := range missingKeys {
+			missingSet[key] = true
+		}
+		for _, key := range opts.Keys {
+			if !missingSet[key] {
+				continue
+			}
+			wantedKeys[key] = true
+		}
+	}
+	log.Printf("[exec-node %s] [incremental] determined %d keys to produce at this node", node.Name, len(wantedKeys))
+
+	// determine which output keys we need to produce at each incremental node
+	// to do this, we iteratively propagate needed keys from children to parents until it is stable
+	neededOutputKeys := make(map[int]map[string]bool)
+	for _, cur := range incrementalNodes {
+		neededOutputKeys[cur.ID] = make(map[string]bool)
+	}
+	neededOutputKeys[node.ID] = wantedKeys
+	getNeededOutputsList := func(id int) []string {
+		var s []string
+		for key := range neededOutputKeys[id] {
+			s = append(s, key)
+		}
+		return s
+	}
+	for {
+		changed := false
+		for _, cur := range incrementalNodes {
+			neededInputs := cur.GetOp().GetNeededInputs(cur.ExecNode, getNeededOutputsList(cur.ID))
+			for name, plist := range cur.Parents {
+				for i, parent := range plist {
+					if parent.Type != "n" {
+						continue
+					}
+					if incrementalNodes[parent.ID] == nil {
+						continue
+					}
+					for _, key := range neededInputs[name][i] {
+	
