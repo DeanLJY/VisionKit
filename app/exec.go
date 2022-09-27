@@ -648,4 +648,51 @@ func init() {
 		if err := skyhook.ParseJsonRequest(w, r, &request); err != nil {
 			return
 		}
-		node := NewExecNode(request.Name, request.Op, request.Params, request.Parents, request.Wor
+		node := NewExecNode(request.Name, request.Op, request.Params, request.Parents, request.Workspace)
+		skyhook.JsonResponse(w, node)
+	}).Methods("POST")
+
+	Router.HandleFunc("/exec-nodes/{node_id}", func(w http.ResponseWriter, r *http.Request) {
+		nodeID := skyhook.ParseInt(mux.Vars(r)["node_id"])
+		node := GetExecNode(nodeID)
+		if node == nil {
+			http.Error(w, "no such exec node", 404)
+			return
+		}
+		skyhook.JsonResponse(w, getFrontendExecNode(node))
+	}).Methods("GET")
+
+	Router.HandleFunc("/exec-nodes/{node_id}", func(w http.ResponseWriter, r *http.Request) {
+		nodeID := skyhook.ParseInt(mux.Vars(r)["node_id"])
+		node := GetExecNode(nodeID)
+		if node == nil {
+			http.Error(w, "no such exec node", 404)
+			return
+		}
+
+		var request ExecNodeUpdate
+		if err := skyhook.ParseJsonRequest(w, r, &request); err != nil {
+			return
+		}
+
+		node.Update(request)
+	}).Methods("POST")
+
+	Router.HandleFunc("/exec-nodes/{node_id}", func(w http.ResponseWriter, r *http.Request) {
+		nodeID := skyhook.ParseInt(mux.Vars(r)["node_id"])
+		node := GetExecNode(nodeID)
+		if node == nil {
+			http.Error(w, "no such exec node", 404)
+			return
+		}
+		node.Delete()
+	}).Methods("DELETE")
+
+	Router.HandleFunc("/exec-nodes/{node_id}/datasets", func(w http.ResponseWriter, r *http.Request) {
+		nodeID := skyhook.ParseInt(mux.Vars(r)["node_id"])
+		node := GetExecNode(nodeID)
+		if node == nil {
+			http.Error(w, "no such exec node", 404)
+			return
+		}
+		datasets, _ := node.GetDatasets(false)
