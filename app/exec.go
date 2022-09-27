@@ -595,3 +595,57 @@ func (node *DBExecNode) Incremental(opts IncrementalOptions) error {
 			rd.SetDone()
 			if err != nil {
 				return err
+			}
+
+			nodesDone[cur.ID] = true
+		}
+	}
+
+	return nil
+}
+
+func init() {
+	type FrontendExecNode struct {
+		DBExecNode
+		Inputs []skyhook.ExecInput
+		Outputs []skyhook.ExecOutput
+	}
+	getFrontendExecNode := func(node *DBExecNode) FrontendExecNode {
+		inputs := node.GetInputs()
+		outputs := node.GetOutputs()
+		if inputs == nil {
+			inputs = []skyhook.ExecInput{}
+		}
+		if outputs == nil {
+			outputs = []skyhook.ExecOutput{}
+		}
+		return FrontendExecNode{
+			DBExecNode: *node,
+			Inputs: inputs,
+			Outputs: outputs,
+		}
+	}
+
+	Router.HandleFunc("/exec-nodes", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		wsName := r.Form.Get("ws")
+		var execNodes []*DBExecNode
+		if wsName == "" {
+			execNodes = ListExecNodes()
+		} else {
+			ws := GetWorkspace(wsName)
+			execNodes = ws.ListExecNodes()
+		}
+		out := make([]FrontendExecNode, len(execNodes))
+		for i := range out {
+			out[i] = getFrontendExecNode(execNodes[i])
+		}
+		skyhook.JsonResponse(w, out)
+	}).Methods("GET")
+
+	Router.HandleFunc("/exec-nodes", func(w http.ResponseWriter, r *http.Request) {
+		var request DBExecNode
+		if err := skyhook.ParseJsonRequest(w, r, &request); err != nil {
+			return
+		}
+		node := NewExecNode(request.Name, request.Op, request.Params, request.Parents, request.Wor
