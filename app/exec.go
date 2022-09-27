@@ -531,4 +531,67 @@ func (node *DBExecNode) Incremental(opts IncrementalOptions) error {
 						continue
 					}
 					for _, key := range neededInputs[name][i] {
-	
+						if neededOutputKeys[parent.ID][key] {
+							continue
+						}
+						changed = true
+						neededOutputKeys[parent.ID][key] = true
+					}
+				}
+			}
+		}
+		if !changed {
+			break
+		}
+	}
+
+	// now we know which output keys we need to compute at every node
+	// so let's go ahead and compute them
+	nodesDone := make(map[int]bool)
+	for !nodesDone[node.ID] {
+		for _, cur := range incrementalNodes {
+			if nodesDone[cur.ID] {
+				continue
+			}
+
+			ready := true
+			for _, plist := range cur.Parents {
+				for _, parent := range plist {
+					if parent.Type != "n" {
+						continue
+					}
+					if incrementalNodes[parent.ID] == nil || nodesDone[parent.ID] {
+						continue
+					}
+					ready = false
+					break
+				}
+			}
+			if !ready {
+				continue
+			}
+
+			curOutputKeys := neededOutputKeys[cur.ID]
+			log.Printf("[exec-node %s] [incremental] computing %d output keys at node %s", node.Name, len(curOutputKeys), cur.Name)
+
+			rd, err := cur.PrepareRun(ExecRunOptions{
+				Incremental: true,
+				LimitOutputKeys: curOutputKeys,
+			})
+			if err != nil {
+				return err
+			}
+			if rd == nil {
+				// Already done.
+				continue
+			}
+
+			if opts.JobOp != nil {
+				opts.JobOp.SetPlanFromMap(incrementalNodes, nodesDone, cur.ID)
+				opts.JobOp.ChangeJob(rd.JobOp.Job.Job)
+			}
+
+			err = rd.Run()
+			rd.SetDone()
+			if err != nil {
+				return err
