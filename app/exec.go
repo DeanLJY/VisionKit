@@ -834,4 +834,43 @@ func init() {
 
 		// compute items in input datasets
 		items := make(map[string][][]skyhook.Item)
-		for name, dslist := r
+		for name, dslist := range node.InputDatasets {
+			items[name] = make([][]skyhook.Item, len(dslist))
+			for i, ds_ := range dslist {
+				ds := GetDataset(ds_.ID)
+				var curItems []skyhook.Item
+				for _, item := range ds.ListItems() {
+					curItems = append(curItems, item.Item)
+				}
+				items[name][i] = curItems
+			}
+		}
+
+		// get tasks
+		tasks, err := node.GetOp().GetTasks(node, items)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			log.Printf("[/runnable] error getting tasks: %v", err)
+			return
+		}
+
+		log.Printf("[/runnable] executing anonymous op [%s-%s] on %d tasks", node.Op, node.Name, len(tasks))
+
+		rd := &RunData{
+			Name: fmt.Sprintf("anonymous-%s", node.Name),
+			Node: node,
+			Tasks: tasks,
+			WillBeDone: true,
+		}
+		rd.SetJob(node.Name, "")
+		go func() {
+			err := rd.Run()
+			rd.SetDone()
+			if err != nil {
+				log.Printf("[/runnable] error on anonymous op [%s-%s]: %v", node.Op, node.Name, err)
+			}
+		}()
+
+		skyhook.JsonResponse(w, rd.JobOp.Job)
+	}).Methods("POST")
+}
