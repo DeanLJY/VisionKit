@@ -788,4 +788,50 @@ func init() {
 		} else if params.Mode == "direct" {
 			opts.Keys = params.Keys
 		} else if params.Mode == "dataset" {
-			// If mode is dataset, we need to g
+			// If mode is dataset, we need to get the items in the dataset and determine
+			// the concrete list of keys that we should compute.
+			dataset, err := ExecParentToDataset(params.ParentSpec)
+			if err != nil {
+				http.Error(w, "could not find the specified dataset; make sure the dataset specifying keys to compute is already computed", 400)
+				return
+			}
+			for _, item := range dataset.ListItems() {
+				opts.Keys = append(opts.Keys, item.Key)
+			}
+		}
+
+		// initialize job for this run
+		job := NewJob(
+			fmt.Sprintf("Partial Execution %s", node.Name),
+			"multiexec",
+			"multiexec",
+			"",
+		)
+		jobOp := &MultiExecJobOp{Job: job}
+		job.AttachOp(jobOp)
+		opts.JobOp = jobOp
+
+		go func() {
+			err := node.Incremental(opts)
+			job.UpdateState(jobOp.Encode())
+			if err != nil {
+				log.Printf("[exec node %s] incremental run error: %v", node.Name, err)
+				job.SetDone(err.Error())
+			} else {
+				job.SetDone("")
+			}
+		}()
+
+		skyhook.JsonResponse(w, job)
+	}).Methods("POST")
+
+	// Execution of an anonymous Runnable with arbitrary configuration.
+	Router.HandleFunc("/runnable", func(w http.ResponseWriter, r *http.Request) {
+		var node skyhook.Runnable
+		if err := skyhook.ParseJsonRequest(w, r, &node); err != nil {
+			return
+		}
+
+		// compute items in input datasets
+		items := make(map[string][][]skyhook.Item)
+		for name, dslist := r
