@@ -121,4 +121,54 @@ func (node *DBExecNode) GetDatasets(create bool) (map[string]*DBDataset, bool) {
 	return datasets, ok
 }
 
-// Get dataset for a virtual
+// Get dataset for a virtual node that comes from this node.
+// If the datasets don't exist already, we create them.
+func (node *DBExecNode) GetVirtualDatasets(vnode *skyhook.VirtualNode) map[string]*DBDataset {
+	nodeHash := node.Hash()
+	datasets := make(map[string]*DBDataset)
+
+	for _, output := range vnode.GetOutputs() {
+		dsName := fmt.Sprintf("%s.%s[%s]", node.Name, vnode.VirtualKey, output.Name)
+		curHash := fmt.Sprintf("%s.%s[%s]", nodeHash, vnode.VirtualKey, output.Name)
+		ds := FindDataset(curHash)
+		if ds == nil {
+			ds = NewDataset(dsName, "computed", output.DataType, &curHash)
+		}
+		ds.AddExecRef(node.ID)
+		datasets[output.Name] = ds
+	}
+	return datasets
+}
+
+// Returns true if all the output datasets are done.
+func (node *DBExecNode) IsDone() bool {
+	datasets, ok := node.GetDatasets(false)
+	if !ok {
+		return false
+	}
+	for _, ds := range datasets {
+		if !ds.Done {
+			return false
+		}
+	}
+	return true
+}
+
+// Delete ExecParent references that match with an isDeleted function.
+func DeleteBrokenReferences(isDeleted func(parent skyhook.ExecParent) bool) {
+	for _, node := range ListExecNodes() {
+		needsUpdate := false
+		for _, plist := range node.Parents {
+			for _, parent := range plist {
+				if isDeleted(parent) {
+					needsUpdate = true
+					break
+				}
+			}
+		}
+		if !needsUpdate {
+			continue
+		}
+		// At least one parent of this node is deleted.
+		// So we need to commit an update.
+		newParents 
