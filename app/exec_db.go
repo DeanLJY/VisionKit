@@ -171,4 +171,47 @@ func DeleteBrokenReferences(isDeleted func(parent skyhook.ExecParent) bool) {
 		}
 		// At least one parent of this node is deleted.
 		// So we need to commit an update.
-		newParents 
+		newParents := make(map[string][]skyhook.ExecParent, len(node.Parents))
+		for name, plist := range node.Parents {
+			for _, parent := range plist {
+				if isDeleted(parent) {
+					log.Printf("[exec_db] deleting broken reference from exec node %s to %v", node.Name, parent)
+					continue
+				}
+				newParents[name] = append(newParents[name], parent)
+			}
+		}
+		node.Update(ExecNodeUpdate{
+			Parents: &newParents,
+		})
+	}
+}
+
+// Delete broken ExecParent references to a node when the node is deleted or its outputs have changed.
+func DeleteReferencesToNode(node *DBExecNode, newOutputs []skyhook.ExecOutput) {
+	outputSet := make(map[string]bool)
+	for _, output := range newOutputs {
+		outputSet[output.Name] = true
+	}
+	DeleteBrokenReferences(func(parent skyhook.ExecParent) bool {
+		return parent.Type == "n" && parent.ID == node.ID && !outputSet[parent.Name]
+	})
+}
+
+// Delete broken ExecParent references to a dataset that has been deleted.
+func DeleteReferencesToDataset(dataset *DBDataset) {
+	DeleteBrokenReferences(func(parent skyhook.ExecParent) bool {
+		return parent.Type == "d" && parent.ID == dataset.ID
+	})
+}
+
+type ExecNodeUpdate struct {
+	Name *string
+	Op *string
+	Params *string
+	Parents *map[string][]skyhook.ExecParent
+}
+
+func (node *DBExecNode) Update(req ExecNodeUpdate) {
+	if req.Name != nil {
+		db.Exe
