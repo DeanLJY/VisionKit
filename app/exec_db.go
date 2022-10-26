@@ -66,4 +66,59 @@ func NewExecNode(name string, op string, params string, parents map[string][]sky
 		string(skyhook.JsonMarshal(parents)),
 		workspace,
 	)
-	node := GetExecNode(res.La
+	node := GetExecNode(res.LastInsertId())
+	return node
+}
+
+func (node *DBExecNode) DatasetRefs() []int {
+	var ds []int
+	rows := db.Query("SELECT dataset_id FROM exec_ds_refs WHERE node_id = ?", node.ID)
+	for rows.Next() {
+		var id int
+		rows.Scan(&id)
+		ds = append(ds, id)
+	}
+	return ds
+}
+
+// Get datasets for each output of this node.
+// If create=true, creates new datasets to cover missing ones.
+// Also returns bool, which is true if all datasets exist.
+func (node *DBExecNode) GetDatasets(create bool) (map[string]*DBDataset, bool) {
+	nodeHash := node.Hash()
+
+	// remove references to datasets that don't even start with the nodeHash
+	existingDS := node.DatasetRefs()
+	for _, id := range existingDS {
+		ds := GetDataset(id)
+		if !strings.HasPrefix(*ds.Hash, nodeHash) {
+			ds.DeleteExecRef(node.ID)
+		}
+	}
+
+	// find datasets that match current hash
+	datasets := make(map[string]*DBDataset)
+	ok := true
+	for _, output := range node.GetOutputs() {
+		dsName := fmt.Sprintf("%s[%s]", node.Name, output.Name)
+		curHash := fmt.Sprintf("%s[%s]", nodeHash, output.Name)
+		ds := FindDataset(curHash)
+		if ds == nil {
+			ok = false
+			if create {
+				ds = NewDataset(dsName, "computed", output.DataType, &curHash)
+			}
+		}
+
+		if ds != nil {
+			ds.AddExecRef(node.ID)
+			datasets[output.Name] = ds
+		} else {
+			datasets[output.Name] = nil
+		}
+	}
+
+	return datasets, ok
+}
+
+// Get dataset for a virtual
