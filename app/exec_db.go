@@ -214,4 +214,48 @@ type ExecNodeUpdate struct {
 
 func (node *DBExecNode) Update(req ExecNodeUpdate) {
 	if req.Name != nil {
-		db.Exe
+		db.Exec("UPDATE exec_nodes SET name = ? WHERE id = ?", *req.Name, node.ID)
+		node.Name = *req.Name
+	}
+	if req.Op != nil {
+		db.Exec("UPDATE exec_nodes SET op = ? WHERE id = ?", *req.Op, node.ID)
+		node.Op = *req.Op
+	}
+	if req.Params != nil {
+		db.Exec("UPDATE exec_nodes SET params = ? WHERE id = ?", *req.Params, node.ID)
+		node.Params = *req.Params
+	}
+	if req.Parents != nil {
+		db.Exec("UPDATE exec_nodes SET parents = ? WHERE id = ?", string(skyhook.JsonMarshal(*req.Parents)), node.ID)
+		node.Parents = *req.Parents
+	}
+	DeleteReferencesToNode(node, node.GetOutputs())
+}
+
+func (node *DBExecNode) Delete() {
+	dsIDs := node.DatasetRefs()
+	for _, id := range dsIDs {
+		GetDataset(id).DeleteExecRef(node.ID)
+	}
+
+	// remove reference to this node from children
+	DeleteReferencesToNode(node, nil)
+
+	db.Exec("DELETE FROM exec_nodes WHERE id = ?", node.ID)
+}
+
+// Resolves an ExecParent to a dataset.
+// If the dataset is unavailable, returns an error.
+func ExecParentToDataset(parent skyhook.ExecParent) (*DBDataset, error) {
+	if parent.Type == "d" {
+		ds := GetDataset(parent.ID)
+		if ds == nil {
+			return nil, fmt.Errorf("no dataset found with the specified ID")
+		}
+		return ds, nil
+	} else if parent.Type == "n" {
+		otherNode := GetExecNode(parent.ID)
+		outputDatasets, _ := otherNode.GetDatasets(false)
+		ds := outputDatasets[parent.Name]
+		if ds == nil {
+			return nil, fmt.Errorf("n
