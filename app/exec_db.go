@@ -258,4 +258,9 @@ func ExecParentToDataset(parent skyhook.ExecParent) (*DBDataset, error) {
 		outputDatasets, _ := otherNode.GetDatasets(false)
 		ds := outputDatasets[parent.Name]
 		if ds == nil {
-			return nil, fmt.Errorf("n
+			return nil, fmt.Errorf("node %s has no output named %s", otherNode.Name, parent.Name)
+		}
+		return ds, nil
+	}
+	return nil, fmt.Errorf("unknown parent type %s", parent.Type)
+}
