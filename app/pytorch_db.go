@@ -105,4 +105,10 @@ type PytorchArchUpdate struct {
 
 func (arch *DBPytorchArch) Update(req PytorchArchUpdate) {
 	if req.Params != nil {
-		db.Exec("UPDATE pytorch_archs SET params = ? WHERE id = ?", string(skyhook.JsonMarshal(*req.Params)), ar
+		db.Exec("UPDATE pytorch_archs SET params = ? WHERE id = ?", string(skyhook.JsonMarshal(*req.Params)), arch.ID)
+	}
+}
+
+func (arch *DBPytorchArch) Delete() {
+	db.Exec("DELETE FROM pytorch_archs WHERE id = ?", arch.ID)
+}
