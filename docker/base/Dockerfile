@@ -10,4 +10,7 @@ RUN apt-get update && \
 	apt-get install -y golang-1.16-go
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 	python3 get-pip.py && \
-	pip3 install scikit-image sci
+	pip3 install scikit-image scikit-video numpy requests Pillow opencv-python PyYAML matplotlib tqdm pandas seaborn
+
+# golang
+RUN ln -s /usr/lib/go-1.16/bin/go /usr/bin/go
