@@ -15,4 +15,39 @@ func init() {
 		Config: skyhook.ExecOpConfig{
 			ID: "concatenate",
 			Name: "Concatenate",
-			Description: "Merge all items in t
+			Description: "Merge all items in the input dataset into one item in the output dataset",
+		},
+		Inputs: []skyhook.ExecInput{{Name: "input"}},
+		GetOutputs: func(params string, inputTypes map[string][]skyhook.DataType) []skyhook.ExecOutput {
+			if len(inputTypes["input"]) == 0 {
+				return nil
+			}
+			return []skyhook.ExecOutput{{Name: "output", DataType: inputTypes["input"][0]}}
+		},
+		Requirements: func(node skyhook.Runnable) map[string]int {
+			return nil
+		},
+		GetTasks: exec_ops.SingleTask("concatenate"),
+		Prepare: func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+			applyFunc := func(task skyhook.ExecTask) error {
+				items := task.Items["input"][0]
+				outDataset := node.OutputDatasets["output"]
+				dtype := outDataset.DataType
+				// we support:
+				// - Table: combine all rows into one table.
+				// - Any sequence type: use ChunkBuilder to build the sequence.
+				// TODO: make Table a sequence type so we don't have to have this special case.
+				if dtype == skyhook.TableType {
+					var outData [][]string
+					var outMetadata skyhook.DataMetadata
+					for _, item := range items {
+						data, metadata, err := item.LoadData()
+						if err != nil {
+							return err
+						}
+						outMetadata = metadata
+						outData = append(outData, data.([][]string)...)
+					}
+					return exec_ops.WriteItem(url, outDataset, "concatenate", outData, outMetadata)
+				} else {
+					// Must be
