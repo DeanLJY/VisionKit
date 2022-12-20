@@ -50,4 +50,31 @@ func init() {
 					}
 					return exec_ops.WriteItem(url, outDataset, "concatenate", outData, outMetadata)
 				} else {
-					// Must be
+					// Must be sequence data.
+					// Get the metadata, ext, and format from the first item.
+					outItem, err := exec_ops.AddItem(url, outDataset, "concatenate", items[0].Ext, items[0].Format, items[0].DecodeMetadata())
+					if err != nil {
+						return err
+					}
+					writer := outItem.LoadWriter()
+					for _, item := range items {
+						reader, _ := item.LoadReader()
+						for {
+							cur, err := reader.Read(32)
+							if err == io.EOF {
+								break
+							} else if err != nil {
+								return err
+							}
+							writer.Write(cur)
+						}
+						reader.Close()
+					}
+					return writer.Close()
+				}
+			}
+			return skyhook.SimpleExecOp{ApplyFunc: applyFunc}, nil
+		},
+		ImageName: "skyhookml/basic",
+	})
+}
