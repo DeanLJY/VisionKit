@@ -33,4 +33,34 @@ func init() {
 					taskItems[i] = []skyhook.Item{item}
 					tasks = append(tasks, skyhook.ExecTask{
 						Key: item.Key,
-						Items: map[string
+						Items: map[string][][]skyhook.Item{"inputs": taskItems},
+					})
+				}
+			}
+			return tasks, nil
+		},
+		Prepare: func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+			applyFunc := func(task skyhook.ExecTask) error {
+				for i, itemList := range task.Items["inputs"] {
+					for _, inItem := range itemList {
+						dataset := node.OutputDatasets[fmt.Sprintf("outputs%d", i)]
+						item, err := exec_ops.AddItem(url, dataset, task.Key, inItem.Ext, inItem.Format, inItem.DecodeMetadata())
+						if err != nil {
+							return err
+						}
+						err = inItem.CopyTo(item.Fname(), inItem.Format, false)
+						if err != nil {
+							return err
+						}
+					}
+				}
+				return nil
+			}
+			return skyhook.SimpleExecOp{ApplyFunc: applyFunc}, nil
+		},
+		Incremental: true,
+		GetOutputKeys: exec_ops.MapGetOutputKeys,
+		GetNeededInputs: exec_ops.MapGetNeededInputs,
+		ImageName: "skyhookml/basic",
+	})
+}
