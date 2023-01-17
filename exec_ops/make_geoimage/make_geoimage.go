@@ -246,3 +246,235 @@ func GetGeojsonTilesMetadatas(params Params, geometries []*geojson.Geometry) []s
 					}
 
 					p1 := toRelativePixelCoordinate(coordinates[ind])
+					p2 := toRelativePixelCoordinate(coordinates[ind+1])
+
+					segment := gomapinfer.Segment{p1,p2}
+					if segment.Intersection(gomapinfer.Segment{corner1, corner2}) != nil {
+						isOverlapped = true
+						return
+					}
+					if segment.Intersection(gomapinfer.Segment{corner2, corner3}) != nil {
+						isOverlapped = true
+						return
+					}
+					if segment.Intersection(gomapinfer.Segment{corner3, corner4}) != nil {
+						isOverlapped = true
+						return
+					}
+					if segment.Intersection(gomapinfer.Segment{corner4, corner1}) != nil {
+						isOverlapped = true
+						return
+					}
+				}
+			}
+
+			handlePolygon := func(coordinates [][][]float64) {
+				// We do not support holes yet, so just use coordinates[0].
+				// coordinates[0] is the exterior ring while coordinates[1:] specify
+				// holes in the polygon that should be excluded.
+				handleLineString(coordinates[0])
+
+				if isOverlapped {
+					return
+				}
+
+				var polygon gomapinfer.Polygon
+				for _, coordinate := range coordinates[0] {
+					p := toRelativePixelCoordinate(coordinate)
+					polygon = append(polygon, p)
+				}
+
+				for _, corner := range corners {
+					if polygon.Contains(corner) {
+						isOverlapped = true
+						return
+					}
+				}
+
+			}
+
+			for _, g := range geometries {
+				if g.Type == geojson.GeometryPoint {
+					handlePoint(g.Point)
+				} else if g.Type == geojson.GeometryMultiPoint {
+					for _, coordinate := range g.MultiPoint {
+						handlePoint(coordinate)
+					}
+				} else if g.Type == geojson.GeometryLineString {
+					handleLineString(g.LineString)
+				} else if g.Type == geojson.GeometryMultiLineString {
+					for _, coordinates := range g.MultiLineString {
+						handleLineString(coordinates)
+					}
+				} else if g.Type == geojson.GeometryPolygon {
+					handlePolygon(g.Polygon)
+				} else if g.Type == geojson.GeometryMultiPolygon {
+					for _, coordinates := range g.MultiPolygon {
+						handlePolygon(coordinates)
+					}
+				}
+
+				if isOverlapped {
+					break
+				}
+			}
+
+			// If the current tile doesn't overlap with the ROI, skip it.
+			if !isOverlapped {
+				continue
+			}
+
+			metadatas = append(metadatas, skyhook.GeoImageMetadata{
+				Zoom: zoom,
+				X: i,
+				Y: j,
+				Width: GeoImageScale,
+				Height: GeoImageScale,
+			})
+			kept_tiles += 1
+		}
+	}
+
+	log.Printf("[spatialflow_partition] found %d tiles overlapping with the ROI from %d tiles", kept_tiles, total_tiles)
+	return metadatas
+}
+
+func GetGeojsonMetadatas(params Params, allItems map[string][][]skyhook.Item) ([]skyhook.GeoImageMetadata, error) {
+	// Load all GeoJSON geometries.
+	// Note that we do this in the GetTasks call, since we want to parallelize the
+	// image download/extraction execution (in the case that params.Materialize is set).
+	var geometries []*geojson.Geometry
+	addFeatures := func(collection *geojson.FeatureCollection) {
+		var q []*geojson.Geometry
+		for _, feature := range collection.Features {
+			if feature.Geometry == nil {
+				continue
+			}
+			q = append(q, feature.Geometry)
+		}
+		for len(q) > 0 {
+			geometry := q[len(q)-1]
+			q = q[0:len(q)-1]
+			if geometry.Type != geojson.GeometryCollection {
+				geometries = append(geometries, geometry)
+				continue
+			}
+			// collection geometry, need to add all its children
+			q = append(q, geometry.Geometries...)
+		}
+	}
+	for _, itemList := range allItems["geojson"] {
+		for _, item := range itemList {
+			data, _, err := item.LoadData()
+			if err != nil {
+				return nil, err
+			}
+			addFeatures(data.(*geojson.FeatureCollection))
+		}
+	}
+
+	if params.ObjectMode == "centered-all" || params.ObjectMode == "centered-disjoint" {
+		return GetGeojsonCenteredMetadatas(params, geometries), nil
+	} else if params.ObjectMode == "tiles" {
+		return GetGeojsonTilesMetadatas(params, geometries), nil
+	}
+	return nil, fmt.Errorf("unknown object mode %s", params.ObjectMode)
+}
+
+func GetTasks(node skyhook.Runnable, allItems map[string][][]skyhook.Item) ([]skyhook.ExecTask, error) {
+	var params Params
+	err := json.Unmarshal([]byte(node.Params), &params)
+	if err != nil {
+		return nil, fmt.Errorf("node has not been configured: %v", err)
+	}
+	var metadatas []skyhook.GeoImageMetadata
+	if params.CaptureMode == "dense" {
+		metadatas = GetDenseMetadatas(params)
+	} else if params.CaptureMode == "geojson" {
+		var err error
+		metadatas, err = GetGeojsonMetadatas(params, allItems)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var tasks []skyhook.ExecTask
+	for i, metadata := range metadatas {
+		var key string
+		if metadata.Offset == [2]int{0, 0} && metadata.Width == GeoImageScale && metadata.Height == GeoImageScale {
+			key = fmt.Sprintf("%d_%d_%d", metadata.Zoom, metadata.X, metadata.Y)
+		} else {
+			key = fmt.Sprintf("%d", i)
+		}
+		metadata.ReferenceType = "webmercator"
+		metadata.Scale = 256
+		metadata.SourceType = "url"
+		metadata.URL = params.Source.URL
+		tasks = append(tasks, skyhook.ExecTask{
+			Key: key,
+			Metadata: string(skyhook.JsonMarshal(TaskMetadata{metadata})),
+		})
+	}
+	return tasks, nil
+}
+
+type Op struct {
+	URL string
+	Params Params
+	Dataset skyhook.Dataset
+}
+
+func (e *Op) Parallelism() int {
+	return runtime.NumCPU()
+}
+
+func (e *Op) Apply(task skyhook.ExecTask) error {
+	// TODO: add support for Materialize.
+	var metadata TaskMetadata
+	skyhook.JsonUnmarshal([]byte(task.Metadata), &metadata)
+	return exec_ops.WriteItem(e.URL, e.Dataset, task.Key, nil, metadata.GeoImageMetadata)
+}
+
+func (e *Op) Close() {}
+
+func init() {
+	skyhook.AddExecOpImpl(skyhook.ExecOpImpl{
+		Config: skyhook.ExecOpConfig{
+			ID: "make_geoimage",
+			Name: "Make Geo-Image Dataset",
+			Description: "Create a Geo-Image dataset by fetching tiles from a URL",
+		},
+		GetInputs: func(rawParams string) []skyhook.ExecInput {
+			var params Params
+			err := json.Unmarshal([]byte(rawParams), &params)
+			if err != nil {
+				// can't do anything if node isn't configured yet
+				return nil
+			}
+			if params.CaptureMode == "geojson" {
+				return []skyhook.ExecInput{{
+					Name: "geojson",
+					DataTypes: []skyhook.DataType{skyhook.GeoJsonType},
+					Variable: true,
+				}}
+			}
+			return nil
+		},
+		Outputs: []skyhook.ExecOutput{{Name: "geoimages", DataType: skyhook.GeoImageType}},
+		Requirements: func(node skyhook.Runnable) map[string]int {
+			return nil
+		},
+		GetTasks: GetTasks,
+		Prepare: func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+			var params Params
+			if err := exec_ops.DecodeParams(node, &params, false); err != nil {
+				return nil, err
+			}
+			return &Op{
+				URL: url,
+				Params: params,
+				Dataset: node.OutputDatasets["geoimages"],
+			}, nil
+		},
+		ImageName: "skyhookml/basic",
+	})
+}
