@@ -13,4 +13,45 @@ type Impl struct {
 	InferInputs []skyhook.ExecInput
 	InferOutputs []skyhook.ExecOutput
 	TrainPrepare func(skyhook.Runnable) (skyhook.PytorchTrainParams, error)
-	InferPrepare func(skyhook.Runnable) (sk
+	InferPrepare func(skyhook.Runnable) (skyhook.PytorchInferParams, error)
+}
+
+func AddImpl(impl Impl) {
+	// We use pytorch.TrainImpl and pytorch.InferImpl as templates for creating
+	// arch-specific exec op.
+	trainImpl := pytorch.TrainImpl
+	trainImpl.Config = skyhook.ExecOpConfig{
+		ID: impl.ID+"_train",
+		Name: impl.Name + " (train)",
+		Description: impl.Name + " (train)",
+	}
+	trainImpl.Inputs = impl.TrainInputs
+	trainImpl.Prepare = func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+		params, err := impl.TrainPrepare(node)
+		if err != nil {
+			return nil, err
+		}
+		node.Params = string(skyhook.JsonMarshal(params))
+
+		// set input datasets: pytorch expects "inputs" and "models"
+		inputDatasets := make(map[string][]skyhook.Dataset)
+		for _, input := range impl.TrainInputs {
+			for _, ds := range node.InputDatasets[input.Name] {
+				if input.Name == "model" || input.Name == "models" {
+					inputDatasets["models"] = append(inputDatasets["models"], ds)
+				} else {
+					inputDatasets["inputs"] = append(inputDatasets["inputs"], ds)
+				}
+			}
+		}
+		node.InputDatasets = inputDatasets
+
+		node.Op = "pytorch_train"
+		return pytorch.TrainImpl.Prepare(url, node)
+	}
+
+	inferImpl := pytorch.InferImpl
+	inferImpl.Config = skyhook.ExecOpConfig{
+		ID: impl.ID+"_infer",
+		Name: impl.Name + " (infer)",
+		Description: impl.Name + " (infer)",
