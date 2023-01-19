@@ -1,3 +1,4 @@
+
 package archs
 
 import (
@@ -8,26 +9,25 @@ import (
 func init() {
 	type TrainParams struct {
 		skyhook.PytorchTrainParams
-		Mode string
+		Resize skyhook.PDDImageOptions
+		NumClasses int
 		ValPercent int
 	}
 
 	type InferParams struct {
-		ConfidenceThreshold float64
+		Resize skyhook.PDDImageOptions
 	}
 
 	type ModelParams struct {
-		Mode string `json:"mode,omitempty"`
-		ConfidenceThreshold float64 `json:"confidence_threshold,omitempty"`
-		IouThreshold float64 `json:"iou_threshold,omitempty"`
+		NumClasses int `json:"num_classes,omitempty"`
 	}
 
 	AddImpl(Impl{
-		ID: "pytorch_ssd",
-		Name: "MobileNet+SSD",
+		ID: "pytorch_unet",
+		Name: "UNet",
 		TrainInputs: []skyhook.ExecInput{
 			{Name: "images", DataTypes: []skyhook.DataType{skyhook.ImageType}},
-			{Name: "detections", DataTypes: []skyhook.DataType{skyhook.DetectionType}},
+			{Name: "labels", DataTypes: []skyhook.DataType{skyhook.ArrayType}},
 			{Name: "models", DataTypes: []skyhook.DataType{skyhook.FileType}},
 		},
 		InferInputs: []skyhook.ExecInput{
@@ -35,7 +35,7 @@ func init() {
 			{Name: "model", DataTypes: []skyhook.DataType{skyhook.FileType}},
 		},
 		InferOutputs: []skyhook.ExecOutput{
-			{Name: "detections", DataType: skyhook.DetectionType},
+			{Name: "output", DataType: skyhook.ArrayType},
 		},
 		TrainPrepare: func(node skyhook.Runnable) (skyhook.PytorchTrainParams, error) {
 			var params TrainParams
@@ -45,22 +45,18 @@ func init() {
 			p := params.PytorchTrainParams
 			p.Dataset.Op = "default"
 			p.Dataset.Params = string(skyhook.JsonMarshal(skyhook.PDDParams{
-				InputOptions: []interface{}{skyhook.PDDImageOptions{
-					Mode: "fixed",
-					Width: 300,
-					Height: 300,
-				}, struct{}{}},
+				InputOptions: []interface{}{params.Resize, struct{}{}},
 				ValPercent: params.ValPercent,
 			}))
 
 			modelParams := ModelParams{
-				Mode: params.Mode,
+				NumClasses: params.NumClasses,
 			}
 			p.Components = map[int]string{
 				0: string(skyhook.JsonMarshal(modelParams)),
 			}
 
-			p.ArchID = "ssd"
+			p.ArchID = "unet"
 			return p, nil
 		},
 		InferPrepare: func(node skyhook.Runnable) (skyhook.PytorchInferParams, error) {
@@ -69,30 +65,17 @@ func init() {
 				return skyhook.PytorchInferParams{}, err
 			}
 			p := skyhook.PytorchInferParams{
-				ArchID: "ssd",
+				ArchID: "unet",
 				OutputDatasets: []skyhook.PIOutputDataset{{
 					ComponentIdx: 0,
-					Layer: "detections",
-					DataType: skyhook.DetectionType,
+					Layer: "classes",
+					DataType: skyhook.ArrayType,
+				}},
+				InputOptions: []skyhook.PIInputOption{{
+					Idx: 0,
+					Value: string(skyhook.JsonMarshal(params.Resize)),
 				}},
 			}
-			opt := skyhook.PDDImageOptions{
-				Mode: "fixed",
-				Width: 300,
-				Height: 300,
-			}
-			p.InputOptions = []skyhook.PIInputOption{{
-				Idx: 0,
-				Value: string(skyhook.JsonMarshal(opt)),
-			}}
-
-			modelParams := ModelParams{
-				ConfidenceThreshold: params.ConfidenceThreshold,
-			}
-			p.Components = map[int]string{
-				0: string(skyhook.JsonMarshal(modelParams)),
-			}
-
 			return p, nil
 		},
 	})
