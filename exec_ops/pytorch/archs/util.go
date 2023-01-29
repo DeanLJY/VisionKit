@@ -92,4 +92,20 @@ func AddImpl(impl Impl) {
 		}
 		node.InputDatasets = inputDatasets
 
-		// set outpu
+		// set output datasets: should match GetInferOutputs(params)
+		outputDatasets := make(map[string]skyhook.Dataset)
+		expectedOutputs := pytorch.GetInferOutputs(params)
+		for i, output := range inferImpl.Outputs {
+			ds := node.OutputDatasets[output.Name]
+			expectedName := expectedOutputs[i].Name
+			outputDatasets[expectedName] = ds
+		}
+		node.OutputDatasets = outputDatasets
+
+		node.Op = "pytorch_infer"
+		return pytorch.InferImpl.Prepare(url, node)
+	}
+
+	skyhook.AddExecOpImpl(trainImpl)
+	skyhook.AddExecOpImpl(inferImpl)
+}
