@@ -70,4 +70,23 @@ func init() {
 				ArchID: "yolov3",
 				OutputDatasets: []skyhook.PIOutputDataset{{
 					ComponentIdx: 0,
-					Layer: "
+					Layer: "detections",
+					DataType: skyhook.DetectionType,
+				}},
+				InputOptions: []skyhook.PIInputOption{{
+					Idx: 0,
+					Value: string(skyhook.JsonMarshal(params.Resize)),
+				}},
+			}
+
+			modelParams := ModelParams{
+				ConfidenceThreshold: params.ConfidenceThreshold,
+			}
+			p.Components = map[int]string{
+				0: string(skyhook.JsonMarshal(modelParams)),
+			}
+
+			return p, nil
+		},
+	})
+}
