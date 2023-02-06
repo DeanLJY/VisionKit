@@ -73,4 +73,20 @@ func init() {
 					Layer: "detections",
 					DataType: skyhook.DetectionType,
 				}},
-				InputOptions: []sk
+				InputOptions: []skyhook.PIInputOption{{
+					Idx: 0,
+					Value: string(skyhook.JsonMarshal(params.Resize)),
+				}},
+			}
+
+			modelParams := ModelParams{
+				ConfidenceThreshold: params.ConfidenceThreshold,
+			}
+			p.Components = map[int]string{
+				0: string(skyhook.JsonMarshal(modelParams)),
+			}
+
+			return p, nil
+		},
+	})
+}

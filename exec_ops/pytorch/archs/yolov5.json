@@ -1,0 +1,36 @@
+{
+	"NumInputs": 1,
+	"NumTargets": 1,
+	"Components": [{
+		"ID": "yolov5",
+		"Inputs": [{
+			"Type": "dataset",
+			"DatasetIdx": 0
+		}],
+		"Targets": [{
+			"Type": "dataset",
+			"DatasetIdx": 1
+		}]
+	}, {
+		"ID": "map_accuracy",
+		"Inputs": [{
+			"Type": "layer",
+			"ComponentIdx": 0,
+			"Layer": "detections"
+		}],
+		"Targets": [{
+			"Type": "dataset",
+			"DatasetIdx": 1
+		}]
+	}],
+	"Losses": [{
+		"ComponentIdx": 0,
+		"Layer": "loss",
+		"Weight": 1
+	}],
+	"Scores": [{
+		"ComponentIdx": 1,
+		"Layer": "score",
+		"Weight": 1
+	}]
+}
