@@ -67,4 +67,49 @@ var InferImpl = skyhook.ExecOpImpl{
 		{Name: "inputs", Variable: true},
 		{Name: "model", DataTypes: []skyhook.DataType{skyhook.FileType}},
 	},
-	GetOutputs: func(rawParams string, inputTypes map[string][]skyhook.Da
+	GetOutputs: func(rawParams string, inputTypes map[string][]skyhook.DataType) []skyhook.ExecOutput {
+		var params skyhook.PytorchInferParams
+		err := json.Unmarshal([]byte(rawParams), &params)
+		if err != nil {
+			return nil
+		}
+		return GetInferOutputs(params)
+	},
+	Requirements: func(node skyhook.Runnable) map[string]int {
+		return map[string]int{"gpu": 1}
+	},
+	GetTasks: func(node skyhook.Runnable, rawItems map[string][][]skyhook.Item) ([]skyhook.ExecTask, error) {
+		// the model only has one dataset, we want to use all the other datasets
+		// should just be under "inputs"
+		items := make(map[string][][]skyhook.Item)
+		for name, value := range rawItems {
+			if name == "model" {
+				continue
+			}
+			items[name] = value
+		}
+		return exec_ops.SimpleTasks(node, items)
+	},
+	Prepare: Prepare,
+	Incremental: true,
+	GetOutputKeys: func(node skyhook.ExecNode, inputs map[string][][]string) []string {
+		inputsWithoutModel := make(map[string][][]string)
+		for name, value := range inputs {
+			if name == "model" {
+				continue
+			}
+			inputsWithoutModel[name] = value
+		}
+		return exec_ops.MapGetOutputKeys(node, inputsWithoutModel)
+	},
+	GetNeededInputs: func(node skyhook.ExecNode, outputs []string) map[string][][]string {
+		neededInputs := exec_ops.MapGetNeededInputs(node, outputs)
+		neededInputs["model"] = [][]string{{"model"}}
+		return neededInputs
+	},
+	ImageName: "skyhookml/pytorch",
+}
+
+func init() {
+	skyhook.AddExecOpImpl(InferImpl)
+}
