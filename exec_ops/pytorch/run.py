@@ -67,4 +67,41 @@ def ingress_worker(worker_id, params, operator, task_queue, infer_queue):
 				output_defaults['framerate'] = in_metadatas[i]['Framerate']
 
 		rd_resp = requests.post(operator.local_url + '/synchronized-reader', json=items, stream=True)
-		rd_resp.raise_
+		rd_resp.raise_for_status()
+
+		in_dtypes = [ds['DataType'] for ds in operator.inputs]
+
+		# Whether we have sent initialization info to the egress worker about this task yet.
+		initialized_egress = False
+
+		while True:
+			# Read a batch.
+			try:
+				datas = skyhook.io.read_datas(rd_resp.raw, in_dtypes, in_metadatas)
+			except EOFError:
+				break
+
+			# Convert datas to our input form.
+			# Also get default canvas_dims based on dimensions of the first input image/video/array.
+			data_len = lib.data_len(in_dtypes[0], datas[0])
+			pytorch_datas = []
+			for ds_idx, data in enumerate(datas):
+				t = in_dtypes[ds_idx]
+
+				if t == 'video':
+					# We already handled input options by mutating the item metadata.
+					# So, here, we just need to transpose.
+					pytorch_data = torch.from_numpy(data).permute(0, 3, 1, 2)
+				else:
+					opt = input_options.get(ds_idx, {})
+					cur_pytorch_datas = []
+					for i in range(data_len):
+						element = lib.data_index(t, data, i)
+						pytorch_data = util.prepare_input(t, element, in_metadatas[ds_idx], opt)
+						cur_pytorch_datas.append(pytorch_data)
+					pytorch_data = util.collate(t, cur_pytorch_datas)
+
+				if 'canvas_dims' not in output_defaults and (t == 'image' or t == 'video' or t == 'array'):
+					output_defaults['canvas_dims'] = [pytorch_data.shape[3], pytorch_data.shape[2]]
+
+				pytorch_datas.
