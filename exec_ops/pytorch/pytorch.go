@@ -55,4 +55,27 @@ func EnsureRepository(repo skyhook.PytorchRepository) error {
 	}
 
 	if repo.Commit != "" {
-		cmd = ex
+		cmd = exec.Command(
+			"git", "checkout", repo.Commit,
+		)
+		cmd.Dir = path
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func EnsureRepositories(comps map[string]*skyhook.PytorchComponent) error {
+	for _, comp := range comps {
+		for _, repo := range comp.Params.Repositories {
+			if err := EnsureRepository(repo); err != nil {
+				return fmt.Errorf("error fetching repository %v: %v", repo, err)
+			}
+		}
+	}
+	return nil
+}
