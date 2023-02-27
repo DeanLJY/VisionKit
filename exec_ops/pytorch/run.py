@@ -191,4 +191,46 @@ def egress_worker(worker_id, operator, egress_queue):
 		request_id = job['RequestID']
 		task = job['Task']
 		output_defaults = job['OutputDefaults']
-		canvas_dims = output_defau
+		canvas_dims = output_defaults.get('canvas_dims', [1280, 720])
+		framerate = output_defaults.get('framerate', [10, 1])
+
+		def gen():
+			sent_meta = False
+
+			while True:
+				job = egress_queue.get()
+				if job['Type'] == 'close':
+					return
+				elif job['Type'] != 'infer':
+					raise Exception('egress: expected init or infer job but got {}'.format(job['Type']))
+
+				y = job['Data']
+
+				# Convert back from pytorch to skyhookml stream data format.
+				out_datas = []
+				out_metadatas = []
+				for out_idx, t in enumerate(out_dtypes):
+					cur = y[out_idx]
+					if t in ['image', 'video', 'array']:
+						cur = cur.permute(0, 2, 3, 1).numpy()
+						out_datas.append(cur)
+						if t == 'image':
+							out_metadatas.append({})
+						elif t == 'video':
+							out_metadatas.append({
+								'Framerate': framerate,
+								'Dims': [cur.shape[2], cur.shape[1]],
+							})
+						elif t == 'array':
+							out_metadatas.append({
+								'Width': cur.shape[2],
+								'Height': cur.shape[1],
+								'Channels': cur.shape[3],
+								'Type': cur.dtype.name,
+							})
+					elif t == 'detection':
+						# detections are represented as a dict
+						# - cur['counts'] is # detections in each image
+						# - cur['detections'] is the flat list of detections (cls, xyxy, conf)
+						# - cur['categories'] is optional string category list
+	
