@@ -104,4 +104,46 @@ def ingress_worker(worker_id, params, operator, task_queue, infer_queue):
 				if 'canvas_dims' not in output_defaults and (t == 'image' or t == 'video' or t == 'array'):
 					output_defaults['canvas_dims'] = [pytorch_data.shape[3], pytorch_data.shape[2]]
 
-				pytorch_datas.
+				pytorch_datas.append(pytorch_data)
+
+			# Initialize the egress worker if not done already.
+			# We send this through the inference thread to synchronize with any previous closed inference jobs and such.
+			if not initialized_egress:
+				infer_queue.put({
+					'Type': 'init',
+					'WorkerID': worker_id,
+					'RequestID': request_id,
+					'Task': task,
+					'OutputDefaults': output_defaults,
+				})
+				initialized_egress = True
+
+			# Pass on to inference thread.
+			infer_queue.put({
+				'Type': 'infer',
+				'WorkerID': worker_id,
+				'Datas': pytorch_datas,
+			})
+
+		# Close the egress worker.
+		# We send this through the inference thread so that any pending inference jobs for this task finish first.
+		infer_queue.put({
+			'Type': 'close',
+			'WorkerID': worker_id,
+		})
+
+def infer_thread(in_dataset_id, params, infer_queue, egress_queues):
+	device = torch.device('cuda:0')
+	cpu_device = torch.device('cpu')
+	model_path = 'data/items/{}/model.pt'.format(in_dataset_id)
+	save_dict = torch.load(model_path)
+
+	# overwrite parameters in save_dict['arch'] with parameters from
+	# params['Components'][comp_idx]
+	arch = save_dict['arch']
+	if params.get('Components', None):
+		overwrite_comp_params = {int(k): v for k, v in params['Components'].items()}
+		for comp_idx, comp_spec in enumerate(arch['Components']):
+			comp_params = {}
+			if comp_spec['Params']:
+				comp_params = json.loads(comp_spec['Params']
