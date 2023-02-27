@@ -146,4 +146,49 @@ def infer_thread(in_dataset_id, params, infer_queue, egress_queues):
 		for comp_idx, comp_spec in enumerate(arch['Components']):
 			comp_params = {}
 			if comp_spec['Params']:
-				comp_params = json.loads(comp_spec['Params']
+				comp_params = json.loads(comp_spec['Params'])
+			if overwrite_comp_params.get(comp_idx, None):
+				comp_params.update(json.loads(overwrite_comp_params[comp_idx]))
+			comp_spec['Params'] = json.dumps(comp_params)
+
+	example_inputs = save_dict['example_inputs']
+	util.inputs_to_device(example_inputs, device)
+
+	net = model.Net(arch, save_dict['comps'], example_inputs, save_dict['example_metadatas'], output_datasets=params['OutputDatasets'], infer=True, device=device)
+	net.to(device)
+
+	net.load_state_dict(save_dict['model'])
+	net.eval()
+
+	with torch.no_grad():
+		while True:
+			job = infer_queue.get()
+			worker_id = job['WorkerID']
+			if job['Type'] != 'infer':
+				# For close job, simply forward it to the egress worker.
+				egress_queues[worker_id].put(job)
+				continue
+			pytorch_datas = job['Datas']
+
+			# Apply the model.
+			util.inputs_to_device(pytorch_datas, device)
+			y = net(*pytorch_datas)
+			y = list(y)
+			util.inputs_to_device(y, cpu_device)
+			egress_queues[worker_id].put({
+				'Type': 'infer',
+				'Data': y,
+			})
+
+def egress_worker(worker_id, operator, egress_queue):
+	out_dtypes = [ds['DataType'] for ds in operator.outputs]
+
+	while True:
+		job = egress_queue.get()
+		if job['Type'] != 'init':
+			raise Exception('egress: expected init job but got {}'.format(job['Type']))
+
+		request_id = job['RequestID']
+		task = job['Task']
+		output_defaults = job['OutputDefaults']
+		canvas_dims = output_defau
