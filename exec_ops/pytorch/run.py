@@ -233,4 +233,44 @@ def egress_worker(worker_id, operator, egress_queue):
 						# - cur['counts'] is # detections in each image
 						# - cur['detections'] is the flat list of detections (cls, xyxy, conf)
 						# - cur['categories'] is optional string category list
-	
+						# first, convert from boxes to skyhookml detections
+						flat_detections = []
+						for box in cur['detections'].tolist():
+							cls, left, top, right, bottom, conf = box
+							if 'categories' in cur:
+								category = cur['categories'][int(cls)]
+							else:
+								category = 'category{}'.format(int(cls))
+							flat_detections.append({
+								'Left': int(left*canvas_dims[0]),
+								'Top': int(top*canvas_dims[1]),
+								'Right': int(right*canvas_dims[0]),
+								'Bottom': int(bottom*canvas_dims[1]),
+								'Score': float(conf),
+								'Category': category,
+							})
+						# second, group up the boxes
+						prefix_sum = 0
+						detections = []
+						for count in cur['counts']:
+							detections.append(flat_detections[prefix_sum:prefix_sum+count])
+							prefix_sum += count
+						out_datas.append(detections)
+						out_metadatas.append({
+							'CanvasDims': canvas_dims,
+						})
+					else:
+						out_datas.append(cur.tolist())
+						out_metadatas.append({})
+
+				# If we haven't sent the meta packet yet, send it.
+				# We delay until here so that we have metadatas.
+				if not sent_meta:
+					sent_meta = True
+					metas = []
+					for out_idx, ds in enumerate(operator.outputs):
+						metas.append({
+							'Dataset': ds,
+							'Key': task['Key'],
+							'Metadata': json.dumps(out_metadatas[out_idx]),
+						}
