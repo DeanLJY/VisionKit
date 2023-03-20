@@ -273,4 +273,47 @@ def egress_worker(worker_id, operator, egress_queue):
 							'Dataset': ds,
 							'Key': task['Key'],
 							'Metadata': json.dumps(out_metadatas[out_idx]),
-						}
+						})
+					buf = io.BytesIO()
+					skyhook.io.write_json(buf, metas)
+					yield buf.getvalue()
+
+				# Encode outputs and yield the bytes.
+				buf = io.BytesIO()
+				skyhook.io.write_datas(buf, out_dtypes, out_datas)
+				yield buf.getvalue()
+
+		# Make the build request.
+		requests.post(operator.local_url + '/build', data=gen()).raise_for_status()
+
+		# Since this is async, here we have to write the skjson line responding to the task.
+		print('skjson'+json.dumps({'RequestID': request_id}), flush=True)
+
+# Watch for child processes that failed in separate thread.
+def watchdog(operator):
+	while True:
+		time.sleep(1)
+		failed = False
+		for p in operator.plist:
+			if not p.is_alive():
+				failed = True
+		if not failed:
+			continue
+
+		print('watchdog: a child process died, terminating', flush=True)
+		operator.close()
+		os._exit(-1)
+		break
+
+class InferOperator(Operator):
+	def __init__(self, meta_packet):
+		super(InferOperator, self).__init__(meta_packet)
+
+		# Use more than one parallelism since ffmpeg on input side may be bottleneck.
+		self.nthreads = max(1, min(4, os.cpu_count()//2))
+
+		# Queue from operator.apply to ingress worker about tasks.
+		self.task_queue = multiprocessing.Queue(1)
+		# Queue from ingress workers to inference thread.
+		infer_queue = multiprocessing.Queue(1)
+		# Queues from inference thread to egress 
