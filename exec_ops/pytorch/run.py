@@ -316,4 +316,37 @@ class InferOperator(Operator):
 		self.task_queue = multiprocessing.Queue(1)
 		# Queue from ingress workers to inference thread.
 		infer_queue = multiprocessing.Queue(1)
-		# Queues from inference thread to egress 
+		# Queues from inference thread to egress workers.
+		egress_queues = []
+
+		self.plist = []
+
+		for worker_id in range(self.nthreads):
+			egress_queue = multiprocessing.Queue(1)
+			egress_queues.append(egress_queue)
+			p = multiprocessing.Process(target=ingress_worker, args=(worker_id, params, self, self.task_queue, infer_queue))
+			p.start()
+			self.plist.append(p)
+			p = multiprocessing.Process(target=egress_worker, args=(worker_id, self, egress_queue))
+			p.start()
+			self.plist.append(p)
+
+		p = multiprocessing.Process(target=infer_thread, args=(in_dataset_id, params, infer_queue, egress_queues))
+		p.start()
+		self.plist.append(p)
+		threading.Thread(target=watchdog, args=(self,)).start()
+
+	def parallelism(self):
+		return self.nthreads
+
+	def apply(self, request_id, task):
+		self.task_queue.put({
+			'RequestID': request_id,
+			'Task': task,
+		})
+
+	def close(self):
+		for p in self.plist:
+			p.kill()
+
+lib.run(InferOperator, async_apply=True)
