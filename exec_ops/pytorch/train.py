@@ -213,4 +213,44 @@ class ModelSaver(object):
 		self.best_score = None
 
 	def update(self, net, score):
-		s
+		should_save = False
+		if self.mode == 'latest':
+			should_save = True
+		elif self.mode == 'best':
+			if self.best_score is None or score > self.best_score:
+				self.best_score = score
+				should_save = True
+
+		if should_save:
+			save_model()
+
+stop_condition = StopCondition(train_params['StopCondition'])
+model_saver = ModelSaver(train_params['ModelSaver'])
+
+rate_decay_params = train_params['RateDecay']
+scheduler = None
+if rate_decay_params['Op'] == 'step':
+	scheduler = torch.optim.lr_scheduler.StepLR(optimizer, rate_decay_params['StepSize'], gamma=rate_decay_params['StepGamma'])
+elif rate_decay_params['Op'] == 'plateau':
+	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+		optimizer,
+		mode='max',
+		factor=rate_decay_params['PlateauFactor'],
+		patience=rate_decay_params['PlateauPatience'],
+		threshold=rate_decay_params['PlateauThreshold'],
+		min_lr=rate_decay_params['PlateauMin']
+	)
+
+if params.get('Restore', None) and parent_models:
+	for i, restore in enumerate(params['Restore']):
+		if i >= len(parent_models):
+			# could happen if user configured restore but then removed parent
+			continue
+
+		parent_model = parent_models[i]
+		src_prefix = restore['SrcPrefix']
+		dst_prefix = restore['DstPrefix']
+		skip_prefixes = [prefix.strip() for prefix in restore['SkipPrefixes'].split(',') if prefix.strip()]
+		print('restore model to', dst_prefix)
+		# load save dict based on dataset ID
+		fname 
