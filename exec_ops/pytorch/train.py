@@ -172,4 +172,45 @@ class StopCondition(object):
 
 	def update(self, score):
 		print(
-			'epochs: {}/{} ... score: {}/{} (epochs since reset: 
+			'epochs: {}/{} ... score: {}/{} (epochs since reset: {}/{}; best score: {})'.format(
+			self.epochs, self.max_epochs, score, self.last_score, self.score_epochs, self.score_max_epochs, self.best_score
+		))
+
+		self.epochs += 1
+		if self.max_epochs and self.epochs >= self.max_epochs:
+			return True
+
+		if self.best_score is None or score > self.best_score:
+			self.best_score = score
+
+		score_threshold = None
+		if self.last_score is not None:
+			score_threshold = self.last_score
+			if self.score_epsilon is not None:
+				score_threshold += self.score_epsilon
+		if score_threshold is None or score > score_threshold:
+			self.score_epochs = 0
+			self.last_score = self.best_score
+		else:
+			self.score_epochs += 1
+		if self.score_max_epochs and self.score_epochs >= self.score_max_epochs:
+			return True
+
+		return False
+
+def save_model():
+	# Save to a different filename first to reduce the chance of model being corrupted
+	# if job is terminated.
+	out_dir = os.path.join('data/items', str(out_dataset_id))
+	torch.save(net.get_save_dict(), os.path.join(out_dir, 'model_.pt'))
+	os.rename(os.path.join(out_dir, 'model_.pt'), os.path.join(out_dir, 'model.pt'))
+
+class ModelSaver(object):
+	def __init__(self, params):
+		# either "latest" or "best"
+		self.mode = params.get('Mode', 'best')
+
+		self.best_score = None
+
+	def update(self, net, score):
+		s
