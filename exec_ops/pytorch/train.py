@@ -253,4 +253,52 @@ if params.get('Restore', None) and parent_models:
 		skip_prefixes = [prefix.strip() for prefix in restore['SkipPrefixes'].split(',') if prefix.strip()]
 		print('restore model to', dst_prefix)
 		# load save dict based on dataset ID
-		fname 
+		fname = 'data/items/{}/model.pt'.format(parent_model['ID'])
+		save_dict = torch.load(fname)
+		# update the parameter names based on src/dst/skip prefixes
+		state_dict = save_dict['model']
+		new_dict = {}
+		for k, v in state_dict.items():
+			if not k.startswith(src_prefix):
+				continue
+			# check skip prefixes
+			skip = False
+			for prefix in skip_prefixes:
+				if k.startswith(prefix):
+					skip = True
+					break
+			if skip:
+				continue
+			# remove src_prefix and add dst_prefix
+			k = k[len(src_prefix):]
+			k = dst_prefix+k
+			new_dict[k] = v
+
+		missing_keys, unexpected_keys = net.load_state_dict(new_dict, strict=False)
+		if missing_keys:
+			print('... warning: got missing keys:', missing_keys)
+		if unexpected_keys:
+			print('... warning: got unexpected keys:', unexpected_keys)
+
+epoch = 0
+
+def get_loss_avgs(losses):
+	loss_avgs = {}
+	for k in losses[0].keys():
+		loss_avgs[k] = numpy.mean([d[k] for d in losses])
+	return loss_avgs
+
+print('begin training')
+save_model()
+while True:
+	train_losses = []
+	net.train()
+	for inputs in train_loader:
+		util.inputs_to_device(inputs, device)
+		for obj in torch_augments:
+			inputs = obj.forward(inputs)
+		optimizer.zero_grad()
+		loss_dict, _ = net(*inputs[0:arch['NumInputs']], targets=inputs[arch['NumInputs']:])
+		loss_dict['loss'].backward()
+		optimizer.step()
+		tr
