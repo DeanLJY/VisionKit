@@ -131,4 +131,45 @@ for i in range(32):
 print('initialize model')
 train_loader = torch.utils.data.DataLoader(
 	train_set,
-	batch_
+	batch_size=batch_size,
+	shuffle=True,
+	num_workers=4,
+	collate_fn=train_set.collate_fn,
+	# drop last unless we'd end up with 0 batches
+	drop_last=len(train_set) > batch_size
+)
+
+for example_inputs in train_loader:
+	break
+util.inputs_to_device(example_inputs, device)
+example_metadatas = train_set.get_metadatas(0)
+net = model.Net(arch, comps, example_inputs, example_metadatas, device=device)
+net.to(device)
+learning_rate = train_params.get('LearningRate', 1e-3)
+optimizer_name = train_params.get('Optimizer', 'adam')
+if optimizer_name == 'adam':
+	optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate)
+updated_lr = False
+
+class StopCondition(object):
+	def __init__(self, params):
+		self.max_epochs = params.get('MaxEpochs', 0)
+
+		# if score improves by less than score_epsilon for score_max_epochs epochs,
+		# then we stop
+		self.score_epsilon = params.get('ScoreEpsilon', 0)
+		self.score_max_epochs = params.get('ScoreMaxEpochs', 25)
+
+		# last score seen where we reset the score_epochs
+		# this is less than the best_score only when score_epsilon > 0
+		# (if a higher score is within epsilon of the last reset score)
+		self.last_score = None
+		# best score seen ever
+		self.best_score = None
+
+		self.epochs = 0
+		self.score_epochs = 0
+
+	def update(self, score):
+		print(
+			'epochs: {}/{} ... score: {}/{} (epochs since reset: 
