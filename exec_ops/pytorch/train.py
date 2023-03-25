@@ -301,4 +301,32 @@ while True:
 		loss_dict, _ = net(*inputs[0:arch['NumInputs']], targets=inputs[arch['NumInputs']:])
 		loss_dict['loss'].backward()
 		optimizer.step()
-		tr
+		train_losses.append({k: v.item() for k, v in loss_dict.items()})
+
+	val_losses = []
+	net.eval()
+	for inputs in val_batches:
+		util.inputs_to_device(inputs, device)
+		loss_dict, _ = net(*inputs[0:arch['NumInputs']], targets=inputs[arch['NumInputs']:])
+		val_losses.append({k: v.item() for k, v in loss_dict.items()})
+
+	train_loss_avgs = get_loss_avgs(train_losses)
+	val_loss_avgs = get_loss_avgs(val_losses)
+
+	json_loss = json.dumps({
+		'train': train_loss_avgs,
+		'val': val_loss_avgs,
+	})
+	print('jsonloss' + json_loss)
+
+	val_loss = val_loss_avgs['loss']
+	score = val_loss_avgs['score']
+
+	if stop_condition.update(score):
+		break
+	model_saver.update(net, score)
+	if scheduler is not None:
+		scheduler.step(score)
+		print('lr={}'.format(optimizer.param_groups[0]['lr']))
+
+	epoch += 1
