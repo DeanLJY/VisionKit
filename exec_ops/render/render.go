@@ -106,4 +106,48 @@ func renderFrame(dtypes []skyhook.DataType, datas []interface{}, metadatas []sky
 	}
 
 	if len(canvases) > 1 {
-		// stack the 
+		// stack the canvases vertically
+		var dims [2]int
+		for _, im := range canvases {
+			if im.Width > dims[0] {
+				dims[0] = im.Width
+			}
+			dims[1] += im.Height
+		}
+		canvas = skyhook.NewImage(dims[0], dims[1])
+		heightOffset := 0
+		for _, im := range canvases {
+			canvas.DrawImage(0, heightOffset, im)
+			heightOffset += im.Height
+		}
+	}
+
+	return canvas, nil
+}
+
+func (e *Render) Apply(task skyhook.ExecTask) error {
+	var inputItems []skyhook.Item
+	for _, itemList := range task.Items["inputs"] {
+		inputItems = append(inputItems, itemList[0])
+	}
+	outputType := inputItems[0].Dataset.DataType
+
+	var outputItem skyhook.Item
+	// First input should be video data or image data.
+	// There may be multiple video/image that we want to render.
+	// But they should all be the same type (and, if video, they must have same framerates).
+	// The output will have all the video/image stacked vertically.
+	if outputType == skyhook.VideoType {
+		// Use video metadata of all video inputs to determine the canvas dimensions.
+		var dims [2]int
+		var outputMetadata skyhook.VideoMetadata
+		for _, item := range inputItems {
+			if item.Dataset.DataType != skyhook.VideoType {
+				continue
+			}
+			curMetadata := item.DecodeMetadata().(skyhook.VideoMetadata)
+			outputMetadata = curMetadata
+			curDims := curMetadata.Dims
+			if curDims[0] > dims[0] {
+				dims[0] = curDims[0]
+			}
