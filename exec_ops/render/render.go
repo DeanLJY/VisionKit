@@ -64,4 +64,46 @@ func renderFrame(dtypes []skyhook.DataType, datas []interface{}, metadatas []sky
 		} else if dtypes[i] == skyhook.StringType {
 			text := data.([]string)[0]
 			canvas.DrawText(skyhook.RichText{Text: text})
-		} else if dtypes[i] == skyhook.ShapeTy
+		} else if dtypes[i] == skyhook.ShapeType {
+			shapes := data.([][]skyhook.Shape)[0]
+			origDims := metadatas[i].(skyhook.ShapeMetadata).CanvasDims
+			targetDims := [2]int{canvas.Width, canvas.Height}
+			if origDims[0] == 0 {
+				origDims = targetDims
+			}
+			for _, shape := range shapes {
+				if shape.Type == "box" {
+					bounds := shape.Bounds()
+					canvas.DrawRectangle(
+						bounds[0]*targetDims[0]/origDims[0],
+						bounds[1]*targetDims[1]/origDims[1],
+						bounds[2]*targetDims[0]/origDims[0],
+						bounds[3]*targetDims[1]/origDims[1],
+						2, [3]uint8{255, 0, 0},
+					)
+				} else if shape.Type == "line" {
+					canvas.DrawLine(
+						shape.Points[0][0]*targetDims[0]/origDims[0],
+						shape.Points[0][1]*targetDims[1]/origDims[1],
+						shape.Points[1][0]*targetDims[0]/origDims[0],
+						shape.Points[1][1]*targetDims[1]/origDims[1],
+						1, [3]uint8{255, 0, 0},
+					)
+				}
+			}
+		} else if dtypes[i] == skyhook.DetectionType {
+			detections := data.([][]skyhook.Detection)[0]
+			origDims := metadatas[i].(skyhook.DetectionMetadata).CanvasDims
+			targetDims := [2]int{canvas.Width, canvas.Height}
+			for _, d := range detections {
+				if origDims[0] != 0 && origDims != targetDims {
+					d = d.Rescale(origDims, targetDims)
+				}
+				color := Colors[d.TrackID % len(Colors)]
+				canvas.DrawRectangle(d.Left, d.Top, d.Right, d.Bottom, 2, color)
+			}
+		}
+	}
+
+	if len(canvases) > 1 {
+		// stack the 
