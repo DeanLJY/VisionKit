@@ -76,4 +76,25 @@ func init() {
 			applyFunc := func(task skyhook.ExecTask) error {
 				// Simply copy each input to the output dataset.
 				// The sampling is taken care of in GetTasks already.
-				for
+				for i, itemList := range task.Items["inputs"] {
+					item := itemList[0]
+					dsName := fmt.Sprintf("outputs%d", i) // matches exec_ops.GetOutputsSimilarToInputs
+					err := skyhook.JsonPostForm(url, fmt.Sprintf("/datasets/%d/items", node.OutputDatasets[dsName].ID), urllib.Values{
+						"key": {task.Key},
+						"ext": {item.Ext},
+						"format": {item.Format},
+						"metadata": {item.Metadata},
+						"provider": {"reference"},
+						"provider_info": {item.Fname()},
+					}, nil)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+			return skyhook.SimpleExecOp{ApplyFunc: applyFunc}, nil
+		},
+		ImageName: "skyhookml/basic",
+	})
+}
