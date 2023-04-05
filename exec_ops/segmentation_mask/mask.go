@@ -80,4 +80,40 @@ func (e *Mask) renderFrame(dtype skyhook.DataType, data interface{}, metadata sk
 					catID,
 				)
 			} else if shape.Type == skyhook.LineShape {
-				sx := shape.P
+				sx := shape.Points[0][0]*dims[0]/shapeDims[0]
+				sy := shape.Points[0][1]*dims[1]/shapeDims[1]
+				ex := shape.Points[1][0]*dims[0]/shapeDims[0]
+				ey := shape.Points[1][1]*dims[1]/shapeDims[1]
+				catID := getCategoryID(shape.Category)
+				if catID == -1 {
+					return nil, fmt.Errorf("unknown category %s", shape.Category)
+				}
+				for _, p := range gomapinfer.DrawLineOnCells(sx, sy, ex, ey, dims[0], dims[1]) {
+					for ox := -padding; ox < padding; ox++ {
+						for oy := -padding; oy < padding; oy++ {
+							x := p[0]+ox
+							y := p[1]+oy
+							if x < 0 || x >= dims[0] || y < 0 || y >= dims[1] {
+								continue
+							}
+							canvas[y*dims[0] + x] = byte(catID)
+						}
+					}
+				}
+			} else if shape.Type == skyhook.PolygonShape {
+				catID := getCategoryID(shape.Category)
+				if catID == -1 {
+					return nil, fmt.Errorf("unknown category %s", shape.Category)
+				}
+				var polygon gomapinfer.Polygon
+				for _, point := range shape.Points {
+					polygon = append(polygon, gomapinfer.Point{
+						float64(point[0]*dims[0]/shapeDims[0]),
+						float64(point[1]*dims[1]/shapeDims[1]),
+					})
+				}
+				bounds := shape.Bounds()
+
+				sx := skyhook.Clip(bounds[0]*dims[0]/shapeDims[0], 0, dims[0])
+				sy := skyhook.Clip(bounds[1]*dims[1]/shapeDims[1], 0, dims[1])
+				ex := skyhook.Clip(bounds[2]*dims[0]/shapeDims[0], 
