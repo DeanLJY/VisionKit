@@ -151,3 +151,58 @@ func (e *Render) Apply(task skyhook.ExecTask) error {
 			if curDims[0] > dims[0] {
 				dims[0] = curDims[0]
 			}
+			dims[1] += curDims[1]
+		}
+		outputMetadata.Dims = dims
+
+		var err error
+		outputItem, err = exec_ops.AddItem(e.URL, e.Dataset, task.Key, inputItems[0].Ext, inputItems[0].Format, outputMetadata)
+		if err != nil {
+			return err
+		}
+	} else if outputType == skyhook.ImageType {
+		var err error
+		outputItem, err = exec_ops.AddItem(e.URL, e.Dataset, task.Key, inputItems[0].Ext, inputItems[0].Format, skyhook.NoMetadata{})
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("first item must be either video or image type")
+	}
+
+	writer := outputItem.LoadWriter()
+
+	var dtypes []skyhook.DataType
+	var metadatas []skyhook.DataMetadata
+	for _, item := range inputItems {
+		dtypes = append(dtypes, item.Dataset.DataType)
+		metadatas = append(metadatas, item.DecodeMetadata())
+	}
+	err := skyhook.PerFrame(inputItems, func(pos int, datas []interface{}) error {
+		im, err := renderFrame(dtypes, datas, metadatas)
+		if err != nil {
+			return err
+		}
+		err = writer.Write([]skyhook.Image{im})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return writer.Close()
+}
+
+func (e *Render) Close() {}
+
+func init() {
+	skyhook.AddExecOpImpl(skyhook.ExecOpImpl{
+		Config: skyhook.ExecOpConfig{
+			ID: "render",
+			Name: "Render Images or Video",
+			Description: "Render images/video from various input data types",
+		},
+		Inputs: []skyhook.ExecInput{{N
