@@ -112,4 +112,19 @@ func init() {
 		Requirements: func(node skyhook.Runnable) map[string]int {
 			return nil
 		},
-		Get
+		GetTasks: exec_ops.SimpleTasks,
+		Prepare: func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+			var params Params
+			if err := exec_ops.DecodeParams(node, &params, false); err != nil {
+				return nil, err
+			}
+			op := &Resample{
+				URL: url,
+				Params: params,
+				Datasets: node.OutputDatasets,
+			}
+			return op, nil
+		},
+		ImageName: "skyhookml/basic",
+	})
+}
