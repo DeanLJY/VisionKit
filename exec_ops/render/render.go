@@ -205,4 +205,29 @@ func init() {
 			Name: "Render Images or Video",
 			Description: "Render images/video from various input data types",
 		},
-		Inputs: []skyhook.ExecInput{{N
+		Inputs: []skyhook.ExecInput{{Name: "inputs", Variable: true}},
+		GetOutputs: func(params string, inputTypes map[string][]skyhook.DataType) []skyhook.ExecOutput {
+			// whether we output video or image depends on the first input
+			var dtype skyhook.DataType = skyhook.VideoType
+			if len(inputTypes["inputs"]) > 0 {
+				dtype = inputTypes["inputs"][0]
+			}
+			return []skyhook.ExecOutput{{
+				Name: "output",
+				DataType: dtype,
+			}}
+		},
+		Requirements: func(node skyhook.Runnable) map[string]int {
+			return nil
+		},
+		GetTasks: exec_ops.SimpleTasks,
+		Prepare: func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+			op := &Render{url, node.OutputDatasets["output"]}
+			return op, nil
+		},
+		Incremental: true,
+		GetOutputKeys: exec_ops.MapGetOutputKeys,
+		GetNeededInputs: exec_ops.MapGetNeededInputs,
+		ImageName: "skyhookml/basic",
+	})
+}
