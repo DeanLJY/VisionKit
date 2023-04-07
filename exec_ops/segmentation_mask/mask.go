@@ -116,4 +116,50 @@ func (e *Mask) renderFrame(dtype skyhook.DataType, data interface{}, metadata sk
 
 				sx := skyhook.Clip(bounds[0]*dims[0]/shapeDims[0], 0, dims[0])
 				sy := skyhook.Clip(bounds[1]*dims[1]/shapeDims[1], 0, dims[1])
-				ex := skyhook.Clip(bounds[2]*dims[0]/shapeDims[0], 
+				ex := skyhook.Clip(bounds[2]*dims[0]/shapeDims[0], 0, dims[0])
+				ey := skyhook.Clip(bounds[3]*dims[1]/shapeDims[1], 0, dims[1])
+				for x := sx; x < ex; x++ {
+					for y := sy; y < ey; y++ {
+						if !polygon.Contains(gomapinfer.Point{float64(x), float64(y)}) {
+							continue
+						}
+						canvas[y*dims[0] + x] = byte(catID)
+					}
+				}
+			} else if shape.Type == skyhook.PointShape {
+				catID := getCategoryID(shape.Category)
+				if catID == -1 {
+					return nil, fmt.Errorf("unknown category %s", shape.Category)
+				}
+				p := [2]int{
+					shape.Points[0][0]*dims[0]/shapeDims[0],
+					shape.Points[0][1]*dims[1]/shapeDims[1],
+				}
+
+				// Draw circle of radius padding centered at p.
+				for ox := -padding; ox < padding; ox++ {
+					for oy := -padding; oy < padding; oy++ {
+						// Check radius.
+						d := ox*ox+oy*oy
+						if d > padding*padding {
+							continue
+						}
+						// Set pixel.
+						x := p[0]+ox
+						y := p[1]+oy
+						if x < 0 || x >= dims[0] || y < 0 || y >= dims[1] {
+							continue
+						}
+						canvas[y*dims[0] + x] = byte(catID)
+					}
+				}
+			} else {
+				panic(fmt.Errorf("mask for shape type %s not implemented", shape.Type))
+			}
+		}
+	} else if dtype == skyhook.DetectionType {
+		detections := data.([][]skyhook.Detection)[0]
+		detDims := metadata.(skyhook.DetectionMetadata).CanvasDims
+		for _, d := range detections {
+			if detDims[0] != 0 && detDims != dims {
+	
