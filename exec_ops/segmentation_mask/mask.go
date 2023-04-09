@@ -162,4 +162,49 @@ func (e *Mask) renderFrame(dtype skyhook.DataType, data interface{}, metadata sk
 		detDims := metadata.(skyhook.DetectionMetadata).CanvasDims
 		for _, d := range detections {
 			if detDims[0] != 0 && detDims != dims {
-	
+				d = d.Rescale(detDims, dims)
+			}
+			catID := getCategoryID(d.Category)
+			if catID == -1 {
+				return nil, fmt.Errorf("unknown category %s", d.Category)
+			}
+			fillRectangle(d.Left, d.Top, d.Right, d.Bottom, catID)
+		}
+	}
+
+	return canvas, nil
+}
+
+func (e *Mask) Apply(task skyhook.ExecTask) error {
+	inputItem := task.Items["input"][0][0]
+	dtype := inputItem.Dataset.DataType
+	inputMetadata := inputItem.DecodeMetadata()
+
+	var categories []string
+	if dtype == skyhook.ShapeType {
+		categories = inputMetadata.(skyhook.ShapeMetadata).Categories
+	} else if dtype == skyhook.DetectionType {
+		categories = inputMetadata.(skyhook.DetectionMetadata).Categories
+	}
+
+	numCategories := len(categories)+1
+	categoryMap := make(map[string]int)
+	if numCategories == 1 {
+		// input dataset doesn't have category labels, so we assume user just wants background/foreground
+		// then, anything in the input dataset should be foreground
+		numCategories = 2
+		categoryMap[""] = 1
+	} else {
+		for i, category := range categories {
+			// 0 is reserved for "background"
+			categoryMap[category] = i+1
+		}
+	}
+
+	outputMetadata := skyhook.ArrayMetadata{
+		Width: e.Params.Dims[0],
+		Height: e.Params.Dims[1],
+		Channels: 1,
+		Type: "uint8",
+	}
+	outputItem, err := exec_ops.AddItem(e.URL, e.OutputDataset, task.Key, "bin", "bin", out
