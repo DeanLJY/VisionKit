@@ -207,4 +207,50 @@ func (e *Mask) Apply(task skyhook.ExecTask) error {
 		Channels: 1,
 		Type: "uint8",
 	}
-	outputItem, err := exec_ops.AddItem(e.URL, e.OutputDataset, task.Key, "bin", "bin", out
+	outputItem, err := exec_ops.AddItem(e.URL, e.OutputDataset, task.Key, "bin", "bin", outputMetadata)
+	if err != nil {
+		return err
+	}
+	writer := outputItem.LoadWriter()
+	err = skyhook.PerFrame([]skyhook.Item{inputItem}, func(pos int, datas []interface{}) error {
+		frameBytes, err := e.renderFrame(dtype, datas[0], inputMetadata, categoryMap)
+		if err != nil {
+			return err
+		}
+		return writer.Write([][]byte{frameBytes})
+	})
+	if err != nil {
+		return err
+	}
+	return writer.Close()
+}
+
+func (e *Mask) Close() {}
+
+func init() {
+	skyhook.AddExecOpImpl(skyhook.ExecOpImpl{
+		Config: skyhook.ExecOpConfig{
+			ID: "segmentation_mask",
+			Name: "Segmentation Mask",
+			Description: "Create segmentation masks from shapes or detections",
+		},
+		Inputs: []skyhook.ExecInput{{Name: "input", DataTypes: []skyhook.DataType{skyhook.DetectionType, skyhook.ShapeType}}},
+		Outputs: []skyhook.ExecOutput{{Name: "output", DataType: skyhook.ArrayType}},
+		Requirements: func(node skyhook.Runnable) map[string]int {
+			return nil
+		},
+		GetTasks: exec_ops.SimpleTasks,
+		Prepare: func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+			var params Params
+			if err := exec_ops.DecodeParams(node, &params, false); err != nil {
+				return nil, err
+			}
+			return &Mask{
+				Params: params,
+				URL: url,
+				OutputDataset: node.OutputDatasets["output"],
+			}, nil
+		},
+		Incremental: true,
+		GetOutputKeys: exec_ops.MapGetOutputKeys,
+		GetNeededInputs: exec_ops.MapGetN
