@@ -253,4 +253,7 @@ func init() {
 		},
 		Incremental: true,
 		GetOutputKeys: exec_ops.MapGetOutputKeys,
-		GetNeededInputs: exec_ops.MapGetN
+		GetNeededInputs: exec_ops.MapGetNeededInputs,
+		ImageName: "skyhookml/basic",
+	})
+}
