@@ -87,3 +87,34 @@ func PreprocessMatches(detections [][]skyhook.Detection, matchLengths []int) map
 	ch := make(chan int)
 	donech := make(chan map[[3]int][]int)
 	for i := 0; i < nthreads; i++ {
+		go func() {
+			threadMatches := make(map[[3]int][]int)
+			for startFrame := range ch {
+				frameMatches := matchFrom(detections, startFrame, maxLength)
+				for curIdx := range frameMatches {
+					for right := range frameMatches[curIdx] {
+						matchLength := right[0] - startFrame
+						rightIdx := right[1]
+						if !matchLengthSet[matchLength] {
+							continue
+						}
+						threadMatches[[3]int{startFrame, curIdx, matchLength}] = append(threadMatches[[3]int{startFrame, curIdx, matchLength}], rightIdx)
+					}
+				}
+			}
+			donech <- threadMatches
+		}()
+	}
+	for startFrame := 0; startFrame < len(detections); startFrame++ {
+		ch <- startFrame
+	}
+	close(ch)
+	for i := 0; i < nthreads; i++ {
+		threadMatches := <- donech
+		for k, v := range threadMatches {
+			matches[k] = v
+		}
+	}
+
+	return matches
+}
