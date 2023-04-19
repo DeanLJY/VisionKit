@@ -248,3 +248,43 @@ func init() {
 				curItems := make(map[string][][]skyhook.Item)
 				for name, itemList := range groupedItems[key] {
 					curItems[name] = make([][]skyhook.Item, len(itemList))
+					for i, item := range itemList {
+						curItems[name][i] = []skyhook.Item{item}
+					}
+				}
+				tasks = append(tasks, skyhook.ExecTask{
+					Key: key,
+					Items: curItems,
+					Metadata: string(skyhook.JsonMarshal(intervals)),
+				})
+			}
+			return tasks, nil
+		},
+		Prepare: func(url string, node skyhook.Runnable) (skyhook.ExecOp, error) {
+			var params Params
+			if err := exec_ops.DecodeParams(node, &params, false); err != nil {
+				return nil, err
+			}
+			op := &VideoSample{
+				URL: url,
+				Params: params,
+				Datasets: node.OutputDatasets,
+			}
+			return op, nil
+		},
+		GetOutputs: func(rawParams string, inputTypes map[string][]skyhook.DataType) []skyhook.ExecOutput {
+			// we always output samples, which is image if params.Length == 1 and video otherwise
+			// but then output others0, others1, ... for each others input (which borrows type from its input)
+
+			var params Params
+			err := json.Unmarshal([]byte(rawParams), &params)
+			if err != nil {
+				// can't do anything if node isn't configured yet
+				// so we leave it unchanged
+				return nil
+			}
+
+			// If input is neither video nor image, we copy the input type.
+			// For video, it is video output unless sample length = 1 in which case it's image.
+			// Image input always yields image output.
+			getOutputType := func(inp
