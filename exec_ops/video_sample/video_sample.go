@@ -205,4 +205,46 @@ func init() {
 				if numFrames < params.Length {
 					continue
 				}
-				videoItems = append(videoItems, Item{item, metadat
+				videoItems = append(videoItems, Item{item, metadata, numFrames})
+			}
+
+			// select the samples
+			samples := make(map[string][][2]int)
+			// TODO: uniform not implemented yet, so we just silently do random
+			if params.Mode == "random" || params.Mode == "uniform" {
+				// sample item based on how many possible segments there are in the item
+				// (which depends on item and segment lengths)
+				weights := make([]int, len(videoItems))
+				var sum int
+				for i, item := range videoItems {
+					weight := item.NumFrames - params.Length
+					weights[i] = weight
+					sum += weight
+				}
+				sampleItem := func() Item {
+					r := rand.Intn(sum)
+					for i, w := range weights {
+						r -= w
+						if r < 0 {
+							return videoItems[i]
+						}
+					}
+					return videoItems[len(videoItems)-1]
+				}
+
+				// sample iteratively
+				for i := 0; i < params.Count; i++ {
+					item := sampleItem()
+					startIdx := rand.Intn(item.NumFrames - params.Length + 1)
+					samples[item.Item.Key] = append(samples[item.Item.Key], [2]int{startIdx, startIdx+params.Length})
+				}
+			} else {
+				return nil, fmt.Errorf("unknown video_sample mode %s", params.Mode)
+			}
+
+			var tasks []skyhook.ExecTask
+			for key, intervals := range samples {
+				// collect items for this task
+				curItems := make(map[string][][]skyhook.Item)
+				for name, itemList := range groupedItems[key] {
+					curItems[name] = make([][]skyhook.Item, len(itemList))
