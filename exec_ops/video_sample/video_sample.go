@@ -72,4 +72,41 @@ func (e *VideoSample) Apply(task skyhook.ExecTask) error {
 		// add segments that start at this frame to the processing set
 		for _, end := range startToEnd[pos] {
 			sampleKey := fmt.Sprintf("%s_%d_%d", task.Key, pos, end)
-		
+			if _, ok := processing[sampleKey]; ok {
+				// duplicate interval
+				continue
+			}
+
+			sample := ProcessingSample{
+				Key: sampleKey,
+				Start: pos,
+				End: end,
+				Writers: make([]skyhook.SequenceWriter, len(inputs)),
+			}
+
+			for i, ds := range outputDatasets {
+				// Add an item to the dataset first.
+				// To do so, we need to know the ext/format/metadata.
+				// If input/output type match, then we can copy it from the input.
+				// If they don't match (video input, image output), we handle the special case.
+				var ext, format string
+				var metadata skyhook.DataMetadata
+				if inputs[i].Dataset.DataType == skyhook.VideoType && ds.DataType == skyhook.ImageType {
+					ext = "jpg"
+					format = "jpeg"
+					metadata = skyhook.NoMetadata{}
+				} else {
+					metadata = metadatas[i]
+					ext, format = inputs[i].DataSpec().GetDefaultExtAndFormat(datas[i], metadatas[i])
+				}
+				if ds.DataType == skyhook.VideoType {
+					// For video outputs, update the Duration of the metadata so that it matches the sample duration.
+					vmeta := metadata.(skyhook.VideoMetadata)
+					vmeta.Duration = float64((end-pos)*vmeta.Framerate[1])/float64(vmeta.Framerate[0])
+					metadata = vmeta
+				}
+				item, err := exec_ops.AddItem(e.URL, ds, sampleKey, ext, format, metadata)
+				if err != nil {
+					return err
+				}
+				sample
