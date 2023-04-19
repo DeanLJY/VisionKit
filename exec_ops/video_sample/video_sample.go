@@ -109,4 +109,62 @@ func (e *VideoSample) Apply(task skyhook.ExecTask) error {
 				if err != nil {
 					return err
 				}
-				sample
+				sample.Writers[i] = item.LoadWriter()
+			}
+
+			processing[sampleKey] = sample
+		}
+
+		// push data onto processing segments
+		for _, sample := range processing {
+			for i := range datas {
+				err := sample.Writers[i].Write(datas[i])
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// remove processing segments that end here
+		for sampleKey, sample := range processing {
+			if pos+1 < sample.End {
+				continue
+			}
+			delete(processing, sampleKey)
+			// Close the writers, and return if we encounter an error.
+			// But we have to be a bit careful to always close all the writers here,
+			// now that we've removed the sample from the processing set.
+			var closeErr error
+			for _, writer := range sample.Writers {
+				err := writer.Close()
+				if err != nil {
+					closeErr = err
+				}
+			}
+			if closeErr != nil {
+				return closeErr
+			}
+		}
+
+		return nil
+	})
+
+	// Before checking err, finish closing any remaining writers.
+	// On a successful run, they should've all been closed already.
+	for sampleKey, sample := range processing {
+		delete(processing, sampleKey)
+		for _, writer := range sample.Writers {
+			writer.Close()
+		}
+		if err == nil {
+			err = fmt.Errorf("segment still processing after iteration")
+		}
+	}
+
+	return err
+}
+
+func (e *VideoSample) Close() {}
+
+func init() {
+	sky
