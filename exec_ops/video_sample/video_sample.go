@@ -167,4 +167,42 @@ func (e *VideoSample) Apply(task skyhook.ExecTask) error {
 func (e *VideoSample) Close() {}
 
 func init() {
-	sky
+	skyhook.AddExecOpImpl(skyhook.ExecOpImpl{
+		Config: skyhook.ExecOpConfig{
+			ID: "video_sample",
+			Name: "Sample video",
+			Description: "Sample images or segments from video",
+		},
+		Inputs: []skyhook.ExecInput{
+			{Name: "video", DataTypes: []skyhook.DataType{skyhook.VideoType}},
+			{Name: "others", Variable: true},
+		},
+		Requirements: func(node skyhook.Runnable) map[string]int {
+			return nil
+		},
+		GetTasks: func(node skyhook.Runnable, allItems map[string][][]skyhook.Item) ([]skyhook.ExecTask, error) {
+			var params Params
+			err := json.Unmarshal([]byte(node.Params), &params)
+			if err != nil {
+				return nil, fmt.Errorf("node has not been configured: %v", err)
+			}
+
+			groupedItems := exec_ops.GroupItems(allItems)
+
+			// only keep items that have length set, and at least params.Length
+			type Item struct {
+				Item skyhook.Item
+				Metadata skyhook.VideoMetadata
+				NumFrames int
+			}
+			var videoItems []Item
+			for _, group := range groupedItems {
+				item := group["video"][0]
+				metadata := item.DecodeMetadata().(skyhook.VideoMetadata)
+
+				// estimate num frames from framerate and duration
+				numFrames := int(metadata.Duration * float64(metadata.Framerate[0])) / metadata.Framerate[1]
+				if numFrames < params.Length {
+					continue
+				}
+				videoItems = append(videoItems, Item{item, metadat
