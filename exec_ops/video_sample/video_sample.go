@@ -287,4 +287,35 @@ func init() {
 			// If input is neither video nor image, we copy the input type.
 			// For video, it is video output unless sample length = 1 in which case it's image.
 			// Image input always yields image output.
-			getOutputType := func(inp
+			getOutputType := func(inputType skyhook.DataType) skyhook.DataType {
+				if inputType != skyhook.VideoType {
+					return inputType
+				}
+				if params.Length == 1 {
+					return skyhook.ImageType
+				} else {
+					return skyhook.VideoType
+				}
+			}
+
+			// first add samples type (based on whether video input is image or video)
+			if len(inputTypes["video"]) == 0 {
+				return nil
+			}
+			outputs := []skyhook.ExecOutput{{
+				Name: "samples",
+				DataType: getOutputType(inputTypes["video"][0]),
+			}}
+
+			// now add others, which copies the type of each one
+			for i, inputType := range inputTypes["others"] {
+				outputs = append(outputs, skyhook.ExecOutput{
+					Name: fmt.Sprintf("others%d", i),
+					DataType: getOutputType(inputType),
+				})
+			}
+			return outputs
+		},
+		ImageName: "skyhookml/basic",
+	})
+}
