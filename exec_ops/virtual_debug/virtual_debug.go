@@ -51,4 +51,6 @@ func init() {
 			}
 			return skyhook.SimpleExecOp{ApplyFunc: applyFunc}, nil
 		},
-		ImageName: "skyhookm
+		ImageName: "skyhookml/basic",
+	})
+}
