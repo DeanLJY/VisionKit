@@ -36,4 +36,17 @@ func CreateParams(fname string, p Params, training bool) {
 		panic(err)
 	}
 	for _, line := range strings.Split(string(bytes), "\n") {
-		line = strings.TrimSpa
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "width=") && p.InputSize[0] > 0 {
+			line = fmt.Sprintf("width=%d", p.InputSize[0])
+		} else if strings.HasPrefix(line, "height=") && p.InputSize[1] > 0 {
+			line = fmt.Sprintf("height=%d", p.InputSize[1])
+		} else if training && strings.HasPrefix(line, "batch=") {
+			line = "batch=64"
+		} else if training && strings.HasPrefix(line, "subdivisions=") {
+			line = "subdivisions=8"
+		}
+		file.Write([]byte(line+"\n"))
+	}
+	file.Close()
+}
