@@ -28,4 +28,18 @@ github.com/mattn/go-sqlite3 v1.14.6/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A
 github.com/mitroadmaps/gomapinfer v0.0.0-20200618184748-ce5d64b5a0d4 h1:w2ngyqzQlZG2jyroTlur23vUvIrXkuBBv3Tl99Y/S3k=
 github.com/mitroadmaps/gomapinfer v0.0.0-20200618184748-ce5d64b5a0d4/go.mod h1:60dnxKwUjhRjPfhvtjJQccZOo741GN+5WymEEc+Aa0c=
 github.com/paulmach/go.geojson v1.4.0 h1:5x5moCkCtDo5x8af62P9IOAYGQcYHtxz2QJ3x1DoCgY=
-github.com/paulmach/go.geojson v1.4.0/go.mod
+github.com/paulmach/go.geojson v1.4.0/go.mod h1:YaKx1hKpWF+T2oj2lFJPsW/t1Q5e1jQI61eoQSTwpIs=
+github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 h1:q2e307iGHPdTGp0hoxKjt1H5pDo6utceo3dQVK3I5XQ=
+github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5/go.mod h1:jvVRKCrJTQWu0XVbaOlby/2lO20uSCHEMzzplHXte1o=
+github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/qedus/osmpbf v1.1.0 h1:1ewnhb7cX0VAp24M+ViDvLI9RKKgZOXFBLM5xGlB5TA=
+github.com/qedus/osmpbf v1.1.0/go.mod h1:37EgzlwZC2inPP5/rY1MZIxE6kgDof7MIljJuELs0c0=
+github.com/rubenfonseca/fastimage v0.0.0-20170112075114-7e006a27a95b h1:F8SRXk6Ahld/UDZqhM5XFNsGRRjMYhpNz5mxe5bjSKI=
+github.com/rubenfonseca/fastimage v0.0.0-20170112075114-7e006a27a95b/go.mod h1:za/FM5/4JjuNHv6y8CdQrGuxtnJP4NBVauNR05i/0HQ=
+github.com/sasha-s/go-deadlock v0.2.0 h1:lMqc+fUb7RrFS3gQLtoQsJ7/6TV/pAIFvBsqX73DK8Y=
+github.com/sasha-s/go-deadlock v0.2.0/go.mod h1:StQn567HiB1fF2yJ44N9au7wOhrPS3iZqiDbRupzT10=
+github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
+github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
+github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1j
