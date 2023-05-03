@@ -22,4 +22,8 @@ import (
 	_ "github.com/skyhookml/skyhookml/exec_ops/simple_tracker"
 	_ "github.com/skyhookml/skyhookml/exec_ops/split"
 	_ "github.com/skyhookml/skyhookml/exec_ops/union"
-	_ "github.com/s
+	_ "github.com/skyhookml/skyhookml/exec_ops/unsupervised_reid"
+	_ "github.com/skyhookml/skyhookml/exec_ops/video_sample"
+	_ "github.com/skyhookml/skyhookml/exec_ops/virtual_debug"
+	_ "github.com/skyhookml/skyhookml/exec_ops/yolov3"
+)
