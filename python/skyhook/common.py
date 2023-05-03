@@ -92,4 +92,58 @@ def get_tracks(detections):
 	track_dict = {}
 	for frame_idx, dlist in enumerate(detections):
 		for detection in dlist:
-			detec
+			detection['FrameIdx'] = frame_idx
+			track_id = detection['TrackID']
+			if track_id not in track_dict:
+				track_dict[track_id] = []
+			track_dict[track_id].append(detection)
+	return track_dict.values()
+
+def tracks_to_detections(tracks, nframes):
+	detections = [[] for _ in range(nframes)]
+	for track in tracks:
+		for detection in track:
+			detections[detection['FrameIdx']].append(detection)
+	return detections
+
+def run(operator_provider, async_apply=False):
+	import importlib
+	import json
+
+	stdin = sys.stdin.detach()
+	meta = skyhook.io.read_json(stdin)
+	operator = operator_provider(meta)
+
+	while True:
+		try:
+			request = skyhook.io.read_json(stdin)
+		except EOFError:
+			break
+
+		id = request['RequestID']
+		name = request['Name']
+		if request['JSON']:
+			params = json.loads(request['JSON'])
+		else:
+			params = None
+
+		response = None
+		if name == 'parallelism':
+			response = operator.parallelism()
+		elif name == 'get_tasks':
+			response = operator.get_tasks(params)
+		elif name == 'apply':
+			if async_apply:
+				operator.apply(id, params)
+				continue
+
+			operator.apply(params)
+
+		packet = {
+			'RequestID': id,
+		}
+		if response is not None:
+			packet['JSON'] = json.dumps(response)
+		print('skjson'+json.dumps(packet), flush=True)
+
+	operator.close()
