@@ -49,4 +49,47 @@ def data_len(t, data):
 def decode_metadata(dataset, item):
 	metadata = {}
 	if dataset['Metadata']:
-		metadata.u
+		metadata.update(json.loads(dataset['Metadata']))
+	if item['Metadata']:
+		metadata.update(json.loads(item['Metadata']))
+	return metadata
+
+# Load data from disk.
+# The output corresponds to what we would get from input_datas.
+# It can be passed to data_index, data_concat, data_len, etc.
+def load_item(dataset, item):
+	fname = 'data/items/{}/{}.{}'.format(dataset['ID'], item['Key'], item['Ext'])
+	t = dataset['DataType']
+	metadata = decode_metadata(dataset, item)
+	format = item['Format']
+
+	if t == 'image':
+		im = skimage.io.imread(fname)
+		return [im]
+	elif t == 'video':
+		raise Exception('load_item cannot handle video data')
+	elif t == 'array':
+		dt = numpy.dtype(metadata['Type'])
+		dt = dt.newbyteorder('>')
+		return numpy.fromfile(fname, dtype=dt).reshape(-1, metadata['Height'], metadata['Width'], metadata['Channels'])
+	else:
+		with open(fname, 'r') as f:
+			data = json.load(f)
+
+		# Correct cases where Golang encodes nil slice as "null" instead of list.
+		for i in range(len(data)):
+			if data[i] is None:
+				data[i] = []
+
+		return data
+
+def load_video(dataset, item):
+	fname = 'data/items/{}/{}.{}'.format(dataset['ID'], item['Key'], item['Ext'])
+	metadata = decode_metadata(dataset, item)
+	return ffmpeg.Ffmpeg(fname, metadata['Dims'], metadata['Framerate'])
+
+def get_tracks(detections):
+	track_dict = {}
+	for frame_idx, dlist in enumerate(detections):
+		for detection in dlist:
+			detec
