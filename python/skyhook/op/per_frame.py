@@ -58,4 +58,38 @@ class PerFrameOperator(Operator):
 							cur_datas.append(arg)
 							cur_metadatas.append({})
 					out_datas.append(cur_datas)
-					out_metadatas.appen
+					out_metadatas.append(cur_metadatas)
+
+				# If we haven't sent the meta packet yet, send it.
+				# We delay until here so that we have metadatas.
+				if not sent_meta:
+					sent_meta = True
+					metas = []
+					for out_idx, ds in enumerate(self.outputs):
+						metas.append({
+							'Dataset': ds,
+							'Key': task['Key'],
+							'Metadata': json.dumps(out_metadatas[0][out_idx]),
+						})
+					buf = io.BytesIO()
+					skyhook.io.write_json(buf, metas)
+					yield buf.getvalue()
+
+				# Stack the outputs, encode them, and yield the bytes.
+				outputs_stacked = []
+				for i, t in enumerate(out_dtypes):
+					data = lib.data_stack(t, [output[i] for output in out_datas])
+					outputs_stacked.append(data)
+				buf = io.BytesIO()
+				skyhook.io.write_datas(buf, out_dtypes, outputs_stacked)
+				yield buf.getvalue()
+
+		# Make the request.
+		requests.post(self.local_url + '/build', data=gen()).raise_for_status()
+
+def per_frame(f):
+	def wrap(meta_packet):
+		op = PerFrameOperator(meta_packet)
+		op.f = f
+		return op
+	return wrap
