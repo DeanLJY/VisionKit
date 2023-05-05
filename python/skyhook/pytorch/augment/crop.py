@@ -85,4 +85,7 @@ class Crop(object):
 					})
 				batch[i] = ninputs
 
-			# we assume that other data types like int, floats
+			# we assume that other data types like int, floats, etc. don't need to be cropped
+
+
+		return batch
