@@ -42,4 +42,24 @@ class ClsHead(torch.nn.Module):
 			convs.append(conv)
 		self.convs = torch.nn.ModuleList(convs)
 
-		se
+		self.fc = torch.nn.Linear(features, num_classes)
+		self.ce = torch.nn.CrossEntropyLoss()
+
+	def forward(self, x, targets=None):
+		for conv in self.convs:
+			x = self.relu(conv(x))
+		x = torch.amax(x, dim=[2, 3])
+		x = self.fc(x)
+
+		d = {
+			'pre_out': x,
+			'out': torch.argmax(x, dim=1),
+		}
+
+		if targets is not None:
+			d['loss'] = torch.mean(self.ce(x, targets[0]))
+
+		return d
+
+def M(info):
+	return ClsHead(info)
