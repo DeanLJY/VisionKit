@@ -47,4 +47,51 @@ def get_iou(pred, gt):
 	return intersect_area / union_area
 
 def compute_ap(recall, precision):
-	# Appe
+	# Append sentinel values to beginning and end
+	mrec = numpy.concatenate(([0.], recall, [recall[-1] + 0.01]))
+	mpre = numpy.concatenate(([1.], precision, [0.]))
+
+	# Compute the precision envelope
+	mpre = numpy.flip(numpy.maximum.accumulate(numpy.flip(mpre)))
+
+	# Integrate area under curve with interp method
+	x = numpy.linspace(0, 1, 101)  # 101-point interp (COCO)
+	ap = numpy.trapz(numpy.interp(x, mrec, mpre), x)  # integrate
+
+	return ap
+
+class MapAccuracy(torch.nn.Module):
+	def __init__(self):
+		super(MapAccuracy, self).__init__()
+		self.iou_threshold = 0.5
+
+	def forward(self, detections, targets=None):
+		if targets is None or self.training:
+			return {}
+
+		orig_device = detections['counts'].device
+		detections = detections
+		targets = targets[0]
+
+		ap_scores = []
+		# Loop over detections in each category and in each image.
+		detections = group_by_image(detections)
+		targets = group_by_image(targets)
+		for image_idx in range(len(detections)):
+			by_categories = group_by_category(detections[image_idx], targets[image_idx])
+			for cls in by_categories.keys():
+				pred, gt = by_categories[cls]
+
+				if len(pred) == 0:
+					ap_scores.append(0)
+					continue
+
+				# sort by confidence
+				pred.sort(key=lambda d: d[4])
+				pred = numpy.stack(pred, axis=0)
+				gt = numpy.stack(gt, axis=0)
+
+				# get iou matrix
+				iou_mat = get_iou(pred, gt)
+
+				# match predicted detec
