@@ -94,4 +94,33 @@ class MapAccuracy(torch.nn.Module):
 				# get iou matrix
 				iou_mat = get_iou(pred, gt)
 
-				# match predicted detec
+				# match predicted detections with ground truth detections
+				tp = numpy.zeros((len(pred),), dtype='bool')
+				fp = numpy.zeros((len(pred),), dtype='bool')
+				gt_seen = numpy.zeros((len(gt),), dtype='bool')
+				for idx1, d1 in enumerate(pred):
+					best_idx = iou_mat[idx1, :].argmax()
+					best_iou = iou_mat[idx1, best_idx]
+					if best_iou > self.iou_threshold and not gt_seen[best_idx]:
+						gt_seen[best_idx] = True
+						tp[idx1] = True
+					else:
+						fp[idx1] = True
+
+				# get precision and recall curves
+				tp_curve = numpy.cumsum(tp.astype('int32'))
+				fp_curve = numpy.cumsum(fp.astype('int32'))
+				recall = tp_curve / len(gt)
+				precision = tp_curve / (fp_curve + tp_curve)
+
+				# compute ap
+				ap_score = compute_ap(recall, precision)
+				ap_scores.append(ap_score)
+
+		map_score = numpy.mean(ap_scores)
+		return {
+		 	'score': torch.as_tensor(map_score, dtype=torch.float32, device=orig_device),
+		}
+
+def M(info):
+	return MapAccuracy()
