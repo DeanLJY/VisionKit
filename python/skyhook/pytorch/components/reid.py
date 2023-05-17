@@ -52,4 +52,28 @@ class Reid(torch.nn.Module):
 		next_features = get_features(next_images)
 
 		pairs = torch.cat([
-			prev_features.reshape(prev_count,
+			prev_features.reshape(prev_count, 1, 64).repeat([1, next_count, 1]),
+			next_features.reshape(1, next_count, 64).repeat([prev_count, 1, 1]),
+		], dim=2)
+		pairs_flat = pairs.reshape(-1, 128)
+		scores_flat = get_scores(pairs_flat)
+		scores = scores_flat.reshape((prev_count, next_count))
+		probs = torch.minimum(
+			self.row_softmax(scores),
+			self.col_softmax(scores),
+		)
+
+		d = {
+			'scores': scores,
+			'probs': probs,
+		}
+
+		if targets:
+			mask = targets[0]
+			product = probs * probs * mask
+			d['loss'] = -torch.log(product.sum(dim=1) + 1e-8).mean()
+
+		return d
+
+def M(info):
+	return Reid(info)
