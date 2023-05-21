@@ -39,4 +39,4 @@ class SimpleBackbone(torch.nn.Module):
 		return outputs
 
 def M(info):
-	return SimpleBackbon
+	return SimpleBackbone(info['params'], info['example_inputs'])
