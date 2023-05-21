@@ -38,4 +38,29 @@ def M(info):
 				self.model.nc = self.nc
 				with open(os.path.join(ctx.expected_path, 'data', 'hyp.scratch.yaml'), 'r') as f:
 					hyp = yaml.load(f, Loader=yaml.FullLoader)
-				self.model.hyp =
+				self.model.hyp = hyp
+				self.model.gr = 1.0
+				self.model.class_weights = torch.ones((self.nc,), dtype=torch.float32)
+				self.model.names = self.categories
+
+			def forward(self, x, targets=None):
+				if targets is not None:
+					targets = yolov3_common.process_targets(targets[0])
+
+				d = {}
+
+				if self.training:
+					d['pred'] = self.model(x.float()/255.0)
+					d['detections'] = None
+				else:
+					inf_out, d['pred'] = self.model(x.float()/255.0)
+					detections = utils.general.non_max_suppression(inf_out, self.confidence_threshold, self.iou_threshold)
+					d['detections'] = yolov3_common.process_outputs((x.shape[3], x.shape[2]), detections, self.categories)
+
+				if targets is not None:
+					loss, _ = utils.loss.compute_loss(d['pred'], targets, self.model)
+					d['loss'] = torch.mean(loss)
+
+				return d
+
+		return Yolov3(info)
