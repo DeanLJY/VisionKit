@@ -85,4 +85,6 @@ def process_outputs(dims, detections, categories):
 		dlists.append(dlist)
 	return {
 		'counts': torch.tensor(counts, dtype=torch.int32, device=dlist.device),
-		'detections
+		'detections': torch.cat(dlists, dim=0),
+		'categories': categories,
+	}
