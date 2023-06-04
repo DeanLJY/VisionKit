@@ -43,4 +43,46 @@ def process_targets(targets):
 	elif 'detections' in targets:
 		# detection type
 		counts = targets['counts']
-		cls_la
+		cls_labels = targets['detections'][:, 0]
+		boxes = targets['detections'][:, 1:5]
+
+	# xyxy -> xywh
+	boxes = torch.stack([
+		(boxes[:, 0] + boxes[:, 2]) / 2,
+		(boxes[:, 1] + boxes[:, 3]) / 2,
+		boxes[:, 2] - boxes[:, 0],
+		boxes[:, 3] - boxes[:, 1],
+	], dim=1)
+
+	# output: list of detections with:
+	# - first column indicating image index
+	# - second column indicating class index
+	indices = torch.repeat_interleave(
+		torch.arange(counts.shape[0], dtype=torch.int32, device=counts.device).float(),
+		counts.long()
+	).reshape(-1, 1)
+	return torch.cat([indices, cls_labels.reshape(-1, 1), boxes], dim=1)
+
+# process yolov5 output detections into skyhook detections
+def process_outputs(dims, detections, categories):
+	# yolov5 returns [xyxy, conf, cls]
+	# and it returns a list with one tensor per detection
+	# we need to transpose it to [cls, xyxy, conf] for skyhook
+	# also we divide by the input image dimensions
+	# and also merge the lists into one
+	counts = []
+	dlists = []
+	for dlist in detections:
+		counts.append(dlist.shape[0])
+		dlist = torch.stack([
+			dlist[:, 5],
+			dlist[:, 0]/dims[0],
+			dlist[:, 1]/dims[1],
+			dlist[:, 2]/dims[0],
+			dlist[:, 3]/dims[1],
+			dlist[:, 4],
+		], dim=1)
+		dlists.append(dlist)
+	return {
+		'counts': torch.tensor(counts, dtype=torch.int32, device=dlist.device),
+		'detections
