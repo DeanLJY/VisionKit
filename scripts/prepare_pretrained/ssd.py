@@ -46,4 +46,13 @@ categories = [
 ]
 example_metadatas = [{}, {'Categories': categories}]
 
-net = model.Net(arch, comps, example_inputs, example_metadatas, device=devic
+net = model.Net(arch, comps, example_inputs, example_metadatas, device=device)
+
+sys.path.append(ssd_path)
+orig_dict = torch.load(in_fname)
+state_dict = {}
+for k, v in orig_dict.items():
+    state_dict['mlist.0.model.'+k] = v
+net.load_state_dict(state_dict)
+
+torch.save(net.get_save_dict(), out_fname)
