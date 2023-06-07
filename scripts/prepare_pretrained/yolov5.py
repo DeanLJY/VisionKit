@@ -1,3 +1,4 @@
+
 import hashlib
 import json
 import numpy
@@ -15,13 +16,13 @@ in_fname = sys.argv[2]
 out_fname = sys.argv[3]
 
 device = torch.device('cpu')
-yolo_path = os.path.join('.', 'data', 'models', hashlib.sha256(b'https://github.com/ultralytics/yolov3.git').hexdigest())
+yolo_path = os.path.join('.', 'data', 'models', hashlib.sha256(b'https://github.com/ultralytics/yolov5.git').hexdigest())
 
 # get arch, comps
-with open('exec_ops/pytorch/archs/yolov3.json', 'r') as f:
+with open('exec_ops/pytorch/archs/yolov5.json', 'r') as f:
     arch = json.load(f)
-with open('python/skyhook/pytorch/components/yolov3.json', 'r') as f:
-    comps = {'yolov3': {'ID': 'yolov3', 'Params': json.load(f)}}
+with open('python/skyhook/pytorch/components/yolov5.json', 'r') as f:
+    comps = {'yolov5': {'ID': 'yolov5', 'Params': json.load(f)}}
 
 # set mode
 comp_params = json.loads(arch['Components'][0].get('Params', '{}'))
