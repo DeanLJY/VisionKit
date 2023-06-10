@@ -42,3 +42,29 @@ func DrawLineOnCells(startX int, startY int, endX int, endY int, maxX int, maxY 
 	}
 
 	points := make([][2]int, 0, deltaX + 1)
+	addPoint := func(x int, y int) {
+		if x >= 0 && x < maxX && y >= 0 && y < maxY {
+			points = append(points, [2]int{x, y})
+		}
+	}
+
+	x := x0
+	y := y0
+
+	for x != x1 + xstep {
+		if followX {
+			addPoint(x, y)
+		} else {
+			addPoint(y, x)
+		}
+
+		x += xstep
+		currentError += deltaY
+		if currentError >= deltaX {
+			y += ystep
+			currentError -= deltaX
+		}
+	}
+
+	return points
+}
