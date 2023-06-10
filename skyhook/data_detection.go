@@ -73,4 +73,13 @@ func (s DetectionJsonSpec) GetEmptyMetadata() (metadata DataMetadata) {
 func (s DetectionJsonSpec) Length(data interface{}) int {
 	return len(data.([][]Detection))
 }
-func (s DetectionJsonSpec) Append(data interface{}, more interfac
+func (s DetectionJsonSpec) Append(data interface{}, more interface{}) interface{} {
+	return append(data.([][]Detection), more.([][]Detection)...)
+}
+func (s DetectionJsonSpec) Slice(data interface{}, i int, j int) interface{} {
+	return data.([][]Detection)[i:j]
+}
+
+func init() {
+	DataSpecs[DetectionType] = SequenceJsonDataImpl{DetectionJsonSpec{}}
+}
