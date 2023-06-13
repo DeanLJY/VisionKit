@@ -79,4 +79,55 @@ func (s ImageDataSpec) Read(format string, metadata DataMetadata, r io.Reader) (
 	if err != nil {
 		return nil, err
 	}
-	return im
+	return image, nil
+}
+
+func (s ImageDataSpec) Write(data interface{}, format string, metadata DataMetadata, w io.Writer) error {
+	image := s.getImage(data)
+	if format == "jpeg" {
+		bytes, err := image.AsJPG()
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(bytes)
+		return err
+	} else if format == "png" {
+		bytes, err := image.AsPNG()
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(bytes)
+		return err
+	}
+	return fmt.Errorf("unknown format %s", format)
+}
+
+func (s ImageDataSpec) GetDefaultExtAndFormat(data interface{}, metadata DataMetadata) (ext string, format string) {
+	return "jpg", "jpeg"
+}
+
+func (s ImageDataSpec) Reader(format string, metadata DataMetadata, r io.Reader) SequenceReader {
+	return NewSliceReader(s, format, metadata, r)
+}
+
+func (s ImageDataSpec) Writer(format string, metadata DataMetadata, w io.Writer) SequenceWriter {
+	return &SliceWriter{
+		Spec: s,
+		Format: format,
+		Metadata: metadata,
+		Writer: w,
+	}
+}
+
+func (s ImageDataSpec) Length(data interface{}) int {
+	return 1
+}
+func (s ImageDataSpec) Append(data interface{}, more interface{}) interface{} {
+	panic(fmt.Errorf("ImageDataSpec.Append not supported"))
+}
+func (s ImageDataSpec) Slice(data interface{}, i int, j int) interface{} {
+	if i == 0 && j == 1 {
+		image := s.getImage(data)
+		return []Image{image}
+	}
+	panic(fmt.Errorf("ImageDataSpec.Slice 
