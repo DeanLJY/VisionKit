@@ -130,4 +130,28 @@ func (s ImageDataSpec) Slice(data interface{}, i int, j int) interface{} {
 		image := s.getImage(data)
 		return []Image{image}
 	}
-	panic(fmt.Errorf("ImageDataSpec.Slice 
+	panic(fmt.Errorf("ImageDataSpec.Slice not supported"))
+}
+
+func (s ImageDataSpec) GetMetadataFromFile(fname string) (format string, metadata DataMetadata, err error) {
+	ext := filepath.Ext(fname)
+	if ext == ".jpg" || ext == ".jpeg" {
+		return "jpeg", NoMetadata{}, nil
+	} else if ext == ".png" {
+		return "png", NoMetadata{}, nil
+	}
+	return "", nil, fmt.Errorf("unrecognized image extension %s in [%s]", ext, fname)
+}
+
+func (s ImageDataSpec) GetExtFromFormat(format string) (ext string) {
+	if format == "jpeg" {
+		return "jpg"
+	} else if format == "png" {
+		return "png"
+	}
+	return ""
+}
+
+func init() {
+	DataSpecs[ImageType] = ImageDataSpec{}
+}
