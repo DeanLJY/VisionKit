@@ -37,4 +37,16 @@ func (s IntJsonSpec) GetEmptyMetadata() (metadata DataMetadata) {
 	return IntMetadata{}
 }
 
-func (s IntJsonSpec) Length(data inte
+func (s IntJsonSpec) Length(data interface{}) int {
+	return len(data.([]int))
+}
+func (s IntJsonSpec) Append(data interface{}, more interface{}) interface{} {
+	return append(data.([]int), more.([]int)...)
+}
+func (s IntJsonSpec) Slice(data interface{}, i int, j int) interface{} {
+	return data.([]int)[i:j]
+}
+
+func init() {
+	DataSpecs[IntType] = SequenceJsonDataImpl{IntJsonSpec{}}
+}
