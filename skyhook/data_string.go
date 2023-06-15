@@ -31,4 +31,5 @@ func (s StringJsonSpec) Slice(data interface{}, i int, j int) interface{} {
 }
 
 func init() {
-	DataSpecs[StringType] =
+	DataSpecs[StringType] = SequenceJsonDataImpl{StringJsonSpec{}}
+}
