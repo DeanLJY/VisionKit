@@ -146,4 +146,46 @@ func (item Item) Remove() {
 func (item Item) DecodeMetadata() DataMetadata {
 	spec := item.DataSpec()
 	metadata := spec.DecodeMetadata(item.Dataset.Metadata)
-	metadata = metadata.Update(spec.DecodeMetadata(item.
+	metadata = metadata.Update(spec.DecodeMetadata(item.Metadata))
+	return metadata
+}
+
+// Copy the data to the specified filename with specified output format.
+// If symlink is true, we try to symlink when possible.
+// In some cases, copying data isn't possible and we need to actually load it (decode+re-encode).
+func (item Item) CopyTo(fname string, format string, symlink bool) error {
+	srcFname := item.Fname()
+	if srcFname != "" && format == item.Format {
+		return CopyOrSymlink(srcFname, fname, symlink)
+	}
+
+	// so either the file is not directly available, or the format doesn't match
+	// either way, we need to load the data and re-encode it
+	data, _, err := item.LoadData()
+	if err != nil {
+		return err
+	}
+	file, err := os.Create(fname)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return item.DataSpec().Write(data, format, item.DecodeMetadata(), file)
+}
+
+func (ds Dataset) DBFname() string {
+	return fmt.Sprintf("data/items/%d/db.sqlite3", ds.ID)
+}
+
+func (ds Dataset) LocalHash() []byte {
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("name=%s\n", ds.Name)))
+	return h.Sum(nil)
+}
+
+type ItemProvider struct {
+	LoadData func(item Item) (interface{}, DataMetadata, error)
+	// optional: we panic if UpdateData is called without being supported
+	UpdateData func(item Item, data interface{}, metadata DataMetadata) error
+	// optional: we return empty string if Fname is called without being supported
+	/
