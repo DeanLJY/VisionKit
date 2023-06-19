@@ -188,4 +188,41 @@ type ItemProvider struct {
 	// optional: we panic if UpdateData is called without being supported
 	UpdateData func(item Item, data interface{}, metadata DataMetadata) error
 	// optional: we return empty string if Fname is called without being supported
-	/
+	// caller then needs to fallback to loading the data
+	Fname func(item Item) string
+}
+
+var ItemProviders = make(map[string]ItemProvider)
+
+var DefaultItemProvider ItemProvider
+
+// helper function to create virtual item providers
+// virtual providers reference another dataset, calling LoadData on the other dataset
+// but then applying some function on the data before returning it
+// in virtual providers, ProviderInfo is JSON-encoded item in other dataset
+// TODO: but this means stack of virtual providers will make item metadata keep getting longer and longer...
+func VirtualProvider(f func(item Item, data interface{}, metadata DataMetadata) (interface{}, DataMetadata, error), visibleFname bool) ItemProvider{
+	var provider ItemProvider
+	provider.LoadData = func(item Item) (interface{}, DataMetadata, error) {
+		var wrappedItem Item
+		JsonUnmarshal([]byte(*item.ProviderInfo), &wrappedItem)
+		data, _, err := wrappedItem.LoadData()
+		if err != nil {
+			return nil, nil, err
+		}
+		return f(item, data, item.DecodeMetadata())
+	}
+	provider.Fname = func(item Item) string {
+		if !visibleFname {
+			return ""
+		}
+		var wrappedItem Item
+		JsonUnmarshal([]byte(*item.ProviderInfo), &wrappedItem)
+		return wrappedItem.Fname()
+	}
+	return provider
+}
+
+func init() {
+	DefaultItemProvider = ItemProvider{
+		LoadData: func(item I
