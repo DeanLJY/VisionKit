@@ -96,4 +96,54 @@ func (item Item) LoadReader() (SequenceReader, DataMetadata) {
 		}, metadata
 	}
 
-	if fileSpec, fileOK := sp
+	if fileSpec, fileOK := spec.(FileSequenceDataSpec); fileOK {
+		return fileSpec.FileReader(item.Format, metadata, fname), metadata
+	}
+	file, err := os.Open(fname)
+	if err != nil {
+		return ErrorSequenceReader{err}, metadata
+	}
+	return ClosingSequenceReader{
+		Reader: spec.Reader(item.Format, metadata, file),
+		ReadCloser: file,
+	}, nil
+}
+
+func (item Item) LoadWriter() SequenceWriter {
+	metadata := item.DecodeMetadata()
+	spec, ok := item.DataSpec().(SequenceDataSpec)
+	if !ok {
+		return ErrorSequenceWriter{fmt.Errorf("data type %s is not sequence type", item.Dataset.DataType)}
+	}
+
+	item.Dataset.Mkdir()
+	fname := item.Fname()
+	if fileSpec, fileOK := spec.(FileSequenceDataSpec); fileOK {
+		return fileSpec.FileWriter(item.Format, metadata, fname)
+	}
+	file, err := os.Create(fname)
+	if err != nil {
+		return ErrorSequenceWriter{err}
+	}
+	return ClosingSequenceWriter{
+		Writer: spec.Writer(item.Format, metadata, file),
+		WriteCloser: file,
+	}
+}
+
+func (ds Dataset) Remove() {
+	os.RemoveAll(fmt.Sprintf("data/items/%d", ds.ID))
+}
+
+func (item Item) Remove() {
+	fname := item.Fname()
+	if fname == "" {
+		panic(fmt.Errorf("Remove not supported in dataset %s", item.Dataset.Name))
+	}
+	os.Remove(fname)
+}
+
+func (item Item) DecodeMetadata() DataMetadata {
+	spec := item.DataSpec()
+	metadata := spec.DecodeMetadata(item.Dataset.Metadata)
+	metadata = metadata.Update(spec.DecodeMetadata(item.
