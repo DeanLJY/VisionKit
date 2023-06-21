@@ -225,4 +225,42 @@ func VirtualProvider(f func(item Item, data interface{}, metadata DataMetadata) 
 
 func init() {
 	DefaultItemProvider = ItemProvider{
-		LoadData: func(item I
+		LoadData: func(item Item) (interface{}, DataMetadata, error) {
+			metadata := item.DecodeMetadata()
+			data, err := DecodeFile(item.Dataset.DataType, item.Format, metadata, item.Fname())
+			if err != nil {
+				return nil, nil, fmt.Errorf("error reading item %s: %v", item.Key, err)
+			}
+			return data, metadata, nil
+		},
+		UpdateData: func(item Item, data interface{}, metadata DataMetadata) error {
+			item.Dataset.Mkdir()
+			file, err := os.Create(item.Fname())
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			if err := item.DataSpec().Write(data, item.Format, metadata, file); err != nil {
+				return err
+			}
+			return nil
+		},
+		Fname: func(item Item) string {
+			return fmt.Sprintf("data/items/%d/%s.%s", item.Dataset.ID, item.Key, item.Ext)
+		},
+	}
+
+	// Supports items that reference another item, which may be in another dataset.
+	// We currently implement the reference by filename.
+	// Metadata is taken from the new item. So it could be different from the original metadata.
+	ItemProviders["reference"] = ItemProvider{
+		LoadData: func(item Item) (interface{}, DataMetadata, error) {
+			metadata := item.DecodeMetadata()
+			filename := *item.ProviderInfo
+			data, err := DecodeFile(item.Dataset.DataType, item.Format, metadata, filename)
+			if err != nil {
+				return nil, nil, err
+			}
+			return data, metadata, err
+		},
+		Fname: func(item Item) s
