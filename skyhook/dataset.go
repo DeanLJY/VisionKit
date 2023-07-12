@@ -263,4 +263,8 @@ func init() {
 			}
 			return data, metadata, err
 		},
-		Fname: func(item Item) s
+		Fname: func(item Item) string {
+			return *item.ProviderInfo
+		},
+	}
+}
