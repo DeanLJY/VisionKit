@@ -53,4 +53,25 @@ func (op *TailJobOp) Update(lines []string) {
 		lines = lines[n:]
 	}
 
-	// now that op.L
+	// now that op.Lines is full, add as many as we can
+	if len(lines) > op.numLines {
+		lines = lines[len(lines)-op.numLines:]
+	}
+	if len(lines) > 0 {
+		// shift to the left
+		copy(op.Lines[0:], op.Lines[len(lines):])
+		// and then insert
+		copy(op.Lines[len(op.Lines)-len(lines):], lines)
+	}
+}
+func (op *TailJobOp) Encode() string {
+	return string(JsonMarshal(op.Lines))
+}
+func  (op *TailJobOp) Stop() error {
+	panic(fmt.Errorf("Stop should never be called on TailJobOp"))
+}
+
+type ModelJobState struct {
+	TrainLoss []float64
+	ValLoss []float64
+}
