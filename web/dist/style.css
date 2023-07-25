@@ -1,0 +1,207 @@
+
+html, body {
+	height: 100%;
+}
+
+.flex-container {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.flex-x-container {
+	display: flex;
+	flex-direction: row;
+}
+
+.flex-content {
+	flex-grow: 1;
+	min-height: 0px;
+}
+
+.flex-content-big {
+	flex-grow: 2;
+}
+
+.scroll-content {
+	overflow: auto;
+}
+
+.table-row-select tr {
+	cursor: pointer;
+}
+.table-row-select tr:hover {
+	background-color: lightblue;
+}
+.table-row-select tr.selected {
+	background-color: lightgreen;
+}
+
+.short-input {
+	max-width: 200px;
+}
+
+.medium-input {
+	max-width: 400px;
+}
+
+.small-container {
+	max-width: 600px;
+}
+
+.medium-container {
+	max-width: 900px;
+}
+
+.table-container {
+	display: table;
+}
+.table-container > .row {
+	display: table-row;
+}
+.table-container > .row > * {
+	display: table-cell;
+	white-space: nowrap;
+}
+
+.bordered-div {
+	border: 1px solid black;
+}
+
+.plaintext-div {
+	font-family: Courier New, monospace;
+}
+
+/* canvas on image */
+.canvas-container {
+	position: relative;
+}
+/*.canvas-container img {
+	position: absolute;
+}*/
+.canvas-container canvas {
+	position: absolute;
+}
+.canvas-container .konva {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+/* graph-based panel */
+
+.graph-div {
+	display: flex;
+	flex-flow: row;
+}
+
+.graph-view {
+	flex-grow: 1;
+}
+
+/* explore panel */
+
+.explore-results-row {
+	display: flex;
+	flex-direction: row;
+}
+
+.explore-results-col {
+	flex-grow: 1;
+	flex-shrink: 1;
+	padding: 5px;
+}
+.explore-results-col:hover {
+	background-color: orange;
+}
+.explore-results-col.selected {
+	background-color: lightblue;
+}
+.explore-results-col.selected:hover {
+	background-color: #0099FF;
+}
+
+.fill-img {
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	object-position: left;
+}
+
+.el-big {
+	height: 100%;
+	width: 100%;
+}
+
+.el-wide {
+	width: 100%;
+}
+
+.el-high {
+	height: 100%;
+}
+
+.chartjs-container {
+	position: relative;
+}
+
+.el-50h {
+	height: 50%;
+}
+
+/*
+In Firefox with Vue.js, required radio button appear red even before the form
+was submitted the first time. This fixes the issue by disabling the red box
+shadow in Firefox.
+See: https://github.com/vuejs/vue/issues/11321
+*/
+@-moz-document url-prefix() {
+	input[type=radio]:required {
+		box-shadow: none;
+	}
+}
+
+/* Bootstrap tooltips are by default center-aligned which looks ugly in our app. */
+.tooltip-inner {
+    text-align: left;
+}
+
+.video-bar .total-bar {
+	width: 100%;
+	height: 20px;
+	/* max-width: 500px; */
+	  background: #ddd;
+  }
+  
+  .video-bar .position-bar {
+	width: 0%;
+	height: 20px;
+	  line-height: 20px;
+	  background: #0088FF;
+	color: #fff;
+  }
+  
+  .video-bar .tooltip {
+	width: 100%;
+	/* max-width: 400px; TODO would like bar to be as wide as the video frame above allows */
+	height: 20px;
+	max-height: 20px;
+	background: #555;
+	opacity: .5;
+	position: relative;
+	display: inline-block;
+  }
+  
+  
+  .video-bar .tooltip .tooltip-text {
+	visibility: hidden;
+	width: 120px;
+	background-color: #555;
+	color: #fff;
+	text-align: center;
+	border-radius: 5px;
+	padding: 6px 0;
+	position: absolute;
+	z-index: 1;
