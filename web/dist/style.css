@@ -205,3 +205,26 @@ See: https://github.com/vuejs/vue/issues/11321
 	padding: 6px 0;
 	position: absolute;
 	z-index: 1;
+	top: 110%;
+	left: 0%;/* will update this on mouse move */
+	margin-left: -60px;
+	opacity: 0;
+	transition: opacity 0.3s;
+  }
+  
+  .video-bar .tooltip .tooltip-text::after {
+	content: "";
+	position: absolute;
+	bottom: 100%;  /* At the top of the tooltip */
+	left: 50%;
+	margin-left: -5px;
+	border-width: 2px;
+	/* top: 100%; At the bottom of the tooltip */
+	border-style: solid;
+	border-color: transparent transparent #555 transparent;
+  }
+  
+  .video-bar .tooltip:hover .tooltip-text {
+	visibility: visible;
+	opacity: 1;
+  }
