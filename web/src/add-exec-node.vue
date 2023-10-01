@@ -188,4 +188,13 @@ export default {
 				Workspace: this.$route.params.ws,
 			};
 			utils.request(this, 'POST', '/exec-nodes', JSON.stringify(params), (node) => {
-				$(this.$refs.modal).
+				$(this.$refs.modal).modal('hide');
+				this.$emit('closed', node);
+			});
+		},
+		selectOp: function(op) {
+			this.op = op;
+		},
+	},
+};
+</script>
