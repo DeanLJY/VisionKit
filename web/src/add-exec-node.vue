@@ -76,4 +76,62 @@
 								</table>
 							</div>
 						</div>
-						<
+						<div class="row mb-2">
+							<label class="col-sm-2 col-form-label">Outputs</label>
+							<div class="col-sm-10">
+								<table class="table">
+									<thead>
+										<tr>
+											<th>Name</th>
+											<th>Type</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr v-for="output in op.Outputs">
+											<td>{{ output.Name }}</td>
+											<td>{{ output.DataType }}</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</template>
+					<div class="form-group row">
+						<div class="col-sm-10">
+							<button type="submit" class="btn btn-primary">Create Node</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+</template>
+
+<script>
+import utils from './utils.js';
+
+export default {
+	data: function() {
+		return {
+			name: '',
+			op: null,
+			categories: [{
+				ID: "general",
+				Name: "General",
+				Ops: [
+					'filter', 'resample',
+					'concatenate', 'union',
+					'sample', 'split',
+					'materialize',
+				],
+			}, {
+				ID: "model",
+				Name: "Model",
+				Ops: [
+					'pytorch_train', 'pytorch_infer',
+					'pytorch_resnet_train', 'pytorch_resnet_infer',
+					'pytorch_ssd_train', 'pytorch_ssd_infer',
+					'pytorch_unet_train', 'pytorch_unet_infer',
+					'pytorch_yolov3_train', 'pytorch_yolov3_infer',
+					'pytorch_yolov5_train', 'pyt
