@@ -134,4 +134,58 @@ export default {
 					'pytorch_ssd_train', 'pytorch_ssd_infer',
 					'pytorch_unet_train', 'pytorch_unet_infer',
 					'pytorch_yolov3_train', 'pytorch_yolov3_infer',
-					'pytorch_yolov5_train', 'pyt
+					'pytorch_yolov5_train', 'pytorch_yolov5_infer',
+					'yolov3_train', 'yolov3_infer',
+					'unsupervised_reid',
+				],
+			}, {
+				ID: "video",
+				Name: "Image/Video",
+				Ops: ['video_sample', 'render', 'cropresize'],
+			}, {
+				ID: "detection",
+				Name: "Detection/Tracking",
+				Ops: [
+					'detection_filter',
+					'simple_tracker', 'reid_tracker',
+				],
+			},{
+				ID: "segmentation",
+				Name: "Segmentation",
+				Ops: [
+					'segmentation_mask', 'extract_polygons',
+				],
+			}, {
+				ID: "code",
+				Name: "Code",
+				Ops: ['python'],
+			}, {
+				ID: "convert",
+				Name: "Convert",
+				Ops: ['from_yolo', 'to_yolo', 'from_coco', 'to_coco', 'from_catfolder', 'to_catfolder'],
+			}, {
+				ID: "geospatial",
+				Name: "Geospatial",
+				Ops: ['make_geoimage', 'geoimage_to_image', 'geojson_to_shape', 'shape_to_geojson'],
+			}],
+		};
+	},
+	created: function() {
+		for(let category of this.categories) {
+			category.Ops = category.Ops.map((opID) => this.$globals.ops[opID]);
+		}
+	},
+	mounted: function() {
+		$(this.$refs.modal).modal('show');
+	},
+	methods: {
+		createNode: function() {
+			var params = {
+				Name: this.name,
+				Op: this.op.ID,
+				Params: '',
+				Parents: null,
+				Workspace: this.$route.params.ws,
+			};
+			utils.request(this, 'POST', '/exec-nodes', JSON.stringify(params), (node) => {
+				$(this.$refs.modal).
