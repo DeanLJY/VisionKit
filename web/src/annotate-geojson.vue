@@ -55,4 +55,51 @@ export default {
 			map: null,
 		};
 	},
-	
+	created: function() {
+		const setID = this.$route.params.setid;
+		utils.request(this, 'GET', '/annotate-datasets/'+setID, null, (annoset) => {
+			this.annoset = annoset;
+
+			let params;
+			try {
+				params = JSON.parse(this.annoset.Params);
+			} catch(e) {}
+			if(!params) params = {};
+			if(!params.TileURL) params.TileURL = '';
+			this.params = params;
+
+			this.fetch();
+
+			this.$store.commit('setRouteData', {
+				annoset: this.annoset,
+			});
+		});
+	},
+	methods: {
+		fetch: function() {
+			let params = {
+				format: 'json',
+				t: new Date().getTime(),
+			};
+			utils.request(this, 'GET', '/datasets/'+this.annoset.Dataset.ID+'/items/'+this.itemKey+'/get', params, (data) => {
+				if(data && data.type == 'FeatureCollection') {
+					this.featureCollection = data;
+				}
+				this.initLeaflet();
+			}, null, {error: (req, status, errorMsg) => {
+				// We ignore the error if it's just that the item doesn't exist.
+				// (The item not existing is expected when we first create the annotation set.)
+				if(req && req.responseText && req.responseText.includes('no such item')) {
+					this.initLeaflet();
+					return;
+				}
+				this.$globals.app.setError(errorMsg);
+			}});
+		},
+		initLeaflet: function() {
+			// If TileURL is not configured yet, there's not much point to display anything.
+			if(!this.params.TileURL) {
+				return;
+			}
+
+			// Create GeoJSON layer in Leafle
