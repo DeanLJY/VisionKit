@@ -102,4 +102,49 @@ export default {
 				return;
 			}
 
-			// Create GeoJSON layer in Leafle
+			// Create GeoJSON layer in Leaflet with https://github.com/geoman-io/leaflet-geoman
+			let featureLayer = L.geoJson(this.featureCollection);
+
+			// Remove previous map container if any.
+			if(this.map) {
+				this.map.off();
+				this.map.remove();
+			}
+
+			// Initialize Leaflet.
+			let imageryLayer = L.tileLayer(this.params.TileURL);
+			this.map = new L.Map(this.$refs.map, {
+				layers: [imageryLayer, featureLayer],
+				center: new L.LatLng(0, 0),
+				zoom: 2,
+			});
+
+			// Add layer control, to toggle OSM.
+			let streetsLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+			let baseLayers = {
+				'Imagery': imageryLayer,
+				'OpenStreetMap': streetsLayer,
+			};
+			L.control.layers(baseLayers, null, {collapsed: false}).addTo(this.map);
+
+			// Add geocoding plugin.
+			let provider = new GeoSearch.OpenStreetMapProvider();
+			provider = LatLonProvider(provider);
+			let search = new GeoSearch.GeoSearchControl({
+				provider: provider,
+				style: 'bar',
+				showMarker: false,
+			});
+			this.map.addControl(search);
+
+			// Add drawing plugin.
+			this.map.pm.addControls();
+
+			// Fit to GeoJSON objects if objects exist.
+			let featureBounds = featureLayer.getBounds();
+			if(featureBounds.isValid()) {
+				this.map.fitBounds(featureBounds);
+			}
+		},
+		saveFeatures: function() {
+			let features = [];
