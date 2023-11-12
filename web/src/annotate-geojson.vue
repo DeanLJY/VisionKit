@@ -148,3 +148,38 @@ export default {
 		},
 		saveFeatures: function() {
 			let features = [];
+			this.map.eachLayer((layer) => {
+				if(!layer.pm) {
+					return;
+				}
+				let feature = layer.toGeoJSON();
+				if(feature.type == 'FeatureCollection') {
+					// leaflet-geoman should automatically create individual features from the FeatureCollection.
+					// So we can ignore it here.
+					return;
+				}
+				features.push(feature);
+			});
+			let data = {
+				type: "FeatureCollection",
+				features: features,
+			};
+			let request = {
+				Key: this.itemKey,
+				Data: JSON.stringify(data),
+				Format: 'json',
+			};
+			utils.request(this, 'POST', '/annotate-datasets/'+this.annoset.ID+'/annotate', JSON.stringify(request), () => {
+				// TODO: display short-lived success message or similar indication.
+			});
+		},
+		saveParams: function() {
+			let request = {
+				Params: JSON.stringify(this.params),
+			}
+			utils.request(this, 'POST', '/annotate-datasets/'+this.annoset.ID, JSON.stringify(request));
+			this.fetch();
+		},
+	},
+};
+</script>
