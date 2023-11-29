@@ -172,4 +172,48 @@ export default AnnotateGenericUI({
 			};
 
 			// we want annotations to be stored in coordinates based on image natural width/height
-			// but in the UI, image could be s
+			// but in the UI, image could be stretched to different width/height
+			// so here we need to stretch the stage in the same way
+			let getScale = () => {
+				return Math.min(
+					this.$refs.image.width / this.imageDims.Width,
+					this.$refs.image.height / this.imageDims.Height,
+				);
+			};
+			let rescaleLayer = () => {
+				if(!this.$refs.layer || !this.$refs.image) {
+					return;
+				}
+				let scale = getScale();
+				stage.width(parseInt(scale*this.imageDims.Width));
+				stage.height(parseInt(scale*this.imageDims.Height));
+				layer.scaleX(scale);
+				layer.scaleY(scale);
+				layer.draw();
+				if(resizeLayer) {
+					resizeLayer.scaleX(scale);
+					resizeLayer.scaleY(scale);
+					resizeLayer.draw();
+				}
+			};
+			this.disconnectResizeObserver();
+			this.resizeObserver = new ResizeObserver(rescaleLayer);
+			this.resizeObserver.observe(this.$refs.image);
+			rescaleLayer();
+			let getPointerPosition = () => {
+				let transform = layer.getAbsoluteTransform().copy();
+				transform.invert();
+				let pos = stage.getPointerPosition();
+				return transform.point(pos);
+			};
+
+			let konvaShapes = [];
+			// curShape is set if we are currently drawing a new shape
+			let curShape = null;
+
+			let resetColors = () => {
+				konvaShapes.forEach((kshp, idx) => {
+					if(this.selectedIdx === idx) {
+						kshp.stroke('orange');
+					} else {
+						kshp.strok
