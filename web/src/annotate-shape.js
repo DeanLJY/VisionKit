@@ -120,3 +120,56 @@ export default AnnotateGenericUI({
 				shp.Left = shape.Points[0][0];
 				shp.Top = shape.Points[0][1];
 				shp.Right = shape.Points[1][0];
+				shp.Bottom = shape.Points[1][1];
+			}
+			if(shape.Category !== '') {
+				shp.Category = shape.Category;
+			}
+			if(shape.TrackID !== '') {
+				shp.TrackID = parseInt(shape.TrackID);
+			}
+			return shp;
+		},
+		updateCategories: function() {
+			if(this.params.CategoriesStr == '') {
+				this.params.Categories = [];
+			} else {
+				this.params.Categories = this.params.CategoriesStr.split(',');
+			}
+		},
+		saveParams: function() {
+			let request = {
+				Params: JSON.stringify({
+					Mode: this.params.Mode,
+					Categories: this.params.Categories,
+				}),
+			};
+			utils.request(this, 'POST', '/annotate-datasets/'+this.annoset.ID, JSON.stringify(request));
+		},
+		setKeyupHandler: function(handler) {
+			if(this.keyupHandler != null) {
+				this.$parent.$off('keyup', this.keyupHandler);
+				this.keyupHandler = null;
+			}
+			if(handler != null) {
+				this.keyupHandler = handler;
+				this.$parent.$on('keyup', this.keyupHandler);
+			}
+		},
+		render: function() {
+			let stage = new Konva.Stage({
+				container: this.$refs.layer,
+				width: this.imageDims.Width,
+				height: this.imageDims.Height,
+			});
+			let layer = new Konva.Layer();
+			let resizeLayer = null;
+			let destroyResizeLayer = () => {
+				if(resizeLayer) {
+					resizeLayer.destroy();
+					resizeLayer = null;
+				}
+			};
+
+			// we want annotations to be stored in coordinates based on image natural width/height
+			// but in the UI, image could be s
