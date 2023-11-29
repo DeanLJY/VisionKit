@@ -216,4 +216,53 @@ export default AnnotateGenericUI({
 					if(this.selectedIdx === idx) {
 						kshp.stroke('orange');
 					} else {
-						kshp.strok
+						kshp.stroke('red');
+					}
+				});
+				layer.draw();
+			};
+
+			let drawShape = (shape, idx) => {
+				let kshp = null;
+
+				if(shape.Type == 'box') {
+					kshp = new Konva.Rect({
+						x: shape.Points[0][0],
+						y: shape.Points[0][1],
+						width: shape.Points[1][0]-shape.Points[0][0],
+						height: shape.Points[1][1]-shape.Points[0][1],
+						stroke: 'red',
+						strokeWidth: 3,
+						hitStrokeWidth: 20,
+						fillEnabled: false,
+						draggable: true,
+					});
+					kshp.myindex = idx;
+
+					let updateShape = () => {
+						shape.Points = [
+							[parseInt(kshp.x()), parseInt(kshp.y())],
+							[parseInt(kshp.x() + kshp.width()*kshp.scaleX()), parseInt(kshp.y() + kshp.height()*kshp.scaleY())],
+						];
+					};
+
+					// called when a rectangle is selected
+					// adds circles to the corners of the rectangle that the user can drag to resize the rectangle
+					let handleResize = () => {
+						destroyResizeLayer()
+						resizeLayer = new Konva.Layer();
+						resizeLayer.scaleX(getScale());
+						resizeLayer.scaleY(getScale());
+						stage.add(resizeLayer);
+
+						// add circles at the four corners of the rectangle
+						let offsets = [
+							[0, 0],
+							[1, 0],
+							[0, 1],
+							[1, 1],
+						];
+						let circles = [];
+						let updateCircles = () => {
+							circles.forEach((circle) => {
+								circle.x(kshp.x()+c
