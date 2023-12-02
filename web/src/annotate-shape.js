@@ -265,4 +265,51 @@ export default AnnotateGenericUI({
 						let circles = [];
 						let updateCircles = () => {
 							circles.forEach((circle) => {
-								circle.x(kshp.x()+c
+								circle.x(kshp.x()+circle.myoffset[0]*kshp.width());
+								circle.y(kshp.y()+circle.myoffset[1]*kshp.height());
+							});
+						};
+						offsets.forEach((offset) => {
+							let circle = new Konva.Circle({
+								x: kshp.x()+offset[0]*kshp.width(),
+								y: kshp.y()+offset[1]*kshp.height(),
+								radius: 10,
+								fill: 'blue',
+								stroke: 'black',
+								strokeWidth: 2,
+								draggable: true,
+							});
+							circle.myoffset = offset;
+							circles.push(circle);
+
+							circle.on('dragmove', (e) => {
+								// If we move the right/bottom circle, then we just need to change the width/height.
+								// But if we move the left/top circle, we need to update the x/y and correspondingly increase the width/height.
+								if(offset[0] === 0) {
+									kshp.width(kshp.width()+kshp.x()-circle.x());
+									kshp.x(circle.x());
+								} else {
+									kshp.width(circle.x()-kshp.x());
+								}
+								if(offset[1] === 0) {
+									kshp.height(kshp.height()+kshp.y()-circle.y());
+									kshp.y(circle.y());
+								} else {
+									kshp.height(circle.y()-kshp.y());
+								}
+								updateCircles();
+								updateShape();
+								layer.draw();
+								resizeLayer.draw();
+							});
+
+							resizeLayer.add(circle);
+						});
+
+						resizeLayer.draw();
+					};
+
+					kshp.on('click', (e) => {
+						if(curShape) {
+							return;
+						}
