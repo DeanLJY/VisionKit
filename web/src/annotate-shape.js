@@ -365,3 +365,64 @@ export default AnnotateGenericUI({
 						y: shape.Points[0][1],
 						radius: 5,
 						stroke: 'red',
+						strokeWidth: 2,
+						draggable: true,
+					});
+
+					let updateShape = () => {
+						shape.Points = [[parseInt(kshp.x()), parseInt(kshp.y())]];
+					};
+
+					kshp.on('click', (e) => {
+						if(curShape) {
+							return;
+						}
+
+						e.cancelBubble = true;
+						this.selectedIdx = kshp.myindex;
+						resetColors();
+					});
+
+					kshp.on('dragend', updateShape);
+				}
+
+				kshp.on('mouseover', () => {
+					if(curShape) {
+						return;
+					}
+					if(this.selectedIdx === kshp.myindex) {
+						// leave it under selected color instead of hover color
+						return;
+					}
+					kshp.stroke('yellow');
+					layer.draw();
+				});
+				kshp.on('mouseout', () => {
+					resetColors();
+				});
+
+				layer.add(kshp);
+				konvaShapes.push(kshp);
+			};
+
+			// add already existing shapes
+			this.shapes[this.frameIdx].forEach((shape, idx) => {
+				drawShape(shape, idx);
+			});
+
+			stage.add(layer);
+			layer.draw();
+
+			// mode-dependent handler in case user wants to cancel drawing a shape
+			// (e.g., presses escape key)
+			let cancelDrawHandler = null;
+
+			if(this.params.Mode == 'box') {
+				let updateRect = (x, y) => {
+					let meta = curShape.meta;
+					let width = Math.abs(meta.x - x);
+					let height = Math.abs(meta.y - y);
+					curShape.x(Math.min(meta.x, x));
+					curShape.y(Math.min(meta.y, y));
+					curShape.width(width);
+			
