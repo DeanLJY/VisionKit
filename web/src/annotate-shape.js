@@ -313,3 +313,55 @@ export default AnnotateGenericUI({
 						if(curShape) {
 							return;
 						}
+
+						e.cancelBubble = true;
+						handleResize();
+						this.selectedIdx = kshp.myindex;
+						resetColors();
+					});
+
+					kshp.on('dragstart', () => {
+						// we don't want to worry about moving around the resize layer during drag operation
+						// so instead we simply destroy it
+						destroyResizeLayer();
+					});
+					kshp.on('dragend', () => {
+						updateShape();
+						// if this shape is selected, restore the resize layer
+						if(this.selectedIdx === kshp.myindex) {
+							handleResize();
+						}
+					});
+				} else if(shape.Type == 'line') {
+					kshp = new Konva.Line({
+						points: [shape.Points[0][0], shape.Points[0][1], shape.Points[1][0], shape.Points[1][1]],
+						stroke: 'red',
+						strokeWidth: 3,
+						draggable: true,
+					});
+
+					let updateShape = () => {
+						let pts = kshp.points();
+						shape.Points = [
+							[parseInt(kshp.x()+pts[0]), parseInt(kshp.y()+pts[1])],
+							[parseInt(kshp.x()+pts[2]), parseInt(kshp.y()+pts[3])],
+						];
+					};
+
+					kshp.on('click', (e) => {
+						if(curShape) {
+							return;
+						}
+
+						e.cancelBubble = true;
+						this.selectedIdx = kshp.myindex;
+						resetColors();
+					});
+
+					kshp.on('dragend', updateShape);
+				} else if(shape.Type == 'point') {
+					kshp = new Konva.Circle({
+						x: shape.Points[0][0],
+						y: shape.Points[0][1],
+						radius: 5,
+						stroke: 'red',
