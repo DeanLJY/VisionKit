@@ -425,4 +425,64 @@ export default AnnotateGenericUI({
 					curShape.x(Math.min(meta.x, x));
 					curShape.y(Math.min(meta.y, y));
 					curShape.width(width);
-			
+					curShape.height(height);
+				};
+				stage.on('click', () => {
+					if(resizeLayer) {
+						destroyResizeLayer()
+						this.selectedIdx = null;
+						resetColors();
+						return;
+					}
+
+					var pos = getPointerPosition();
+					if(curShape == null) {
+						curShape = new Konva.Rect({
+							x: pos.x,
+							y: pos.y,
+							width: 1,
+							height: 1,
+							stroke: 'yellow',
+							strokeWidth: 3,
+						});
+						curShape.meta = {x: pos.x, y: pos.y};
+						layer.add(curShape);
+						layer.draw();
+					} else {
+						updateRect(pos.x, pos.y);
+
+						let shape = {
+							Type: 'box',
+							Points: [
+								[parseInt(curShape.x()), parseInt(curShape.y())],
+								[parseInt(curShape.x()+curShape.width()), parseInt(curShape.y()+curShape.height())],
+							],
+							Category: this.category,
+							TrackID: '',
+						};
+						this.shapes[this.frameIdx].push(shape);
+						drawShape(shape, this.shapes[this.frameIdx].length-1);
+
+						curShape.destroy();
+						curShape = null;
+						layer.draw();
+					}
+				});
+				stage.on('mousemove', () => {
+					if(curShape == null) {
+						return;
+					}
+					var pos = getPointerPosition();
+					updateRect(pos.x, pos.y);
+					layer.batchDraw();
+				});
+
+				this.cancelDrawHandler = () => {
+					if(curShape === null) {
+						return;
+					}
+					curShape.destroy();
+					curShape = null;
+					layer.draw();
+				};
+			} else
