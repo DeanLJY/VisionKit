@@ -596,4 +596,41 @@ export default AnnotateGenericUI({
 	},
 	template: {
 		params: `
-<form class="ro
+<form class="row g-1 align-items-center" v-on:submit.prevent="saveParams">
+	<div class="col-auto">
+		<label>Mode</label>
+	</div>
+	<div class="col-auto">
+		<select class="form-select" v-model="params.Mode" @change="render">
+			<option value="box">Box</option>
+			<option value="point">Point</option>
+			<option value="line">Line</option>
+			<option value="polygon">Polygon</option>
+		</select>
+	</div>
+	<div class="col-auto">
+		<template v-if="params.Mode == 'box'">
+			<i class="bi bi-question-circle" data-bs-toggle="tooltip" title="Box mode: click twice to draw a box. Escape to cancel current drawing, click to select box, Delete to delete selection."></i>
+		</template>
+	</div>
+	<div class="col-auto">
+		<label>Categories (comma-separated)</label>
+	</div>
+	<div class="col-auto">
+		<input class="form-control" type="text" v-model="params.CategoriesStr" @change="updateCategories">
+	</div>
+	<div class="col-auto">
+		<button type="submit" class="btn btn-primary">Save Settings</button>
+	</div>
+</form>
+		`,
+		im_above: `
+<div class="row g-1 align-items-center">
+	<div class="col-auto">
+		<label>Category:</label>
+	</div>
+	<div class="col-auto">
+		<select class="form-select form-select-sm" v-model="category">
+			<option value="">None</option>
+			<template v-for="category in params.Categories">
+				<option :key="category" :value="category">{{ category
