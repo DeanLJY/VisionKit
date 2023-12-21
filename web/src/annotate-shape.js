@@ -538,4 +538,62 @@ export default AnnotateGenericUI({
 				});
 
 				this.cancelDrawHandler = () => {
-					if(curShape === 
+					if(curShape === null) {
+						return;
+					}
+					curShape.destroy();
+					curShape = null;
+					layer.draw();
+				}
+			} else if(this.params.Mode == 'point') {
+				stage.on('click', () => {
+					if(resizeLayer) {
+						destroyResizeLayer()
+						this.selectedIdx = null;
+						layer.draw();
+						return;
+					}
+
+					var pos = getPointerPosition();
+					let shape = {
+						Type: 'point',
+						Points: [[parseInt(pos.x), parseInt(pos.y)]],
+						Category: this.category,
+						TrackID: '',
+					};
+					this.shapes[this.frameIdx].push(shape);
+					drawShape(shape, this.shapes[this.frameIdx].length-1);
+					layer.draw();
+				});
+
+				this.cancelDrawHandler = () => {
+					if(curShape === null) {
+						return;
+					}
+					curShape.destroy();
+					curShape = null;
+					layer.draw();
+				}
+			}
+
+			// initialize a handler for deleting selected shapes
+			this.deleteSelectionHandler = () => {
+				if(this.selectedIdx === null) {
+					return;
+				}
+				this.shapes[this.frameIdx].splice(this.selectedIdx, 1);
+				let kshp = konvaShapes[this.selectedIdx];
+				konvaShapes.splice(this.selectedIdx, 1);
+				konvaShapes.forEach((kshp, idx) => {
+					kshp.myindex = idx;
+				});
+				kshp.destroy();
+				destroyResizeLayer();
+				this.selectedIdx = null;
+				layer.draw();
+			};
+		},
+	},
+	template: {
+		params: `
+<form class="ro
