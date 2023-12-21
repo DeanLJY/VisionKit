@@ -485,4 +485,57 @@ export default AnnotateGenericUI({
 					curShape = null;
 					layer.draw();
 				};
-			} else
+			} else if(this.params.Mode == 'line') {
+				let updateLine = (x, y) => {
+					let pts = curShape.points();
+					curShape.points([pts[0], pts[1], x, y]);
+				};
+				stage.on('click', () => {
+					if(resizeLayer) {
+						destroyResizeLayer()
+						this.selectedIdx = null;
+						layer.draw();
+						return;
+					}
+
+					var pos = getPointerPosition();
+					if(curShape == null) {
+						curShape = new Konva.Line({
+							points: [pos.x, pos.y, pos.x+1, pos.y+1],
+							stroke: 'yellow',
+							strokeWidth: 3,
+						});
+						layer.add(curShape);
+						layer.draw();
+					} else {
+						updateLine(pos.x, pos.y);
+
+						let pts = curShape.points();
+						let shape = {
+							Type: 'line',
+							Points: [
+								[parseInt(pts[0]), parseInt(pts[1])],
+								[parseInt(pts[2]), parseInt(pts[3])],
+							],
+							Category: this.category,
+							TrackID: '',
+						};
+						this.shapes[this.frameIdx].push(shape);
+						drawShape(shape, this.shapes[this.frameIdx].length-1);
+
+						curShape.destroy();
+						curShape = null;
+						layer.draw();
+					}
+				});
+				stage.on('mousemove', () => {
+					if(curShape == null) {
+						return;
+					}
+					var pos = getPointerPosition();
+					updateLine(pos.x, pos.y);
+					layer.batchDraw();
+				});
+
+				this.cancelDrawHandler = () => {
+					if(curShape === 
