@@ -633,4 +633,46 @@ export default AnnotateGenericUI({
 		<select class="form-select form-select-sm" v-model="category">
 			<option value="">None</option>
 			<template v-for="category in params.Categories">
-				<option :key="category" :value="category">{{ category
+				<option :key="category" :value="category">{{ category }}</option>
+			</template>
+		</select>
+	</div>
+</div>
+		`,
+		im_after: `
+<div
+	v-if="imageDims != null"
+	ref="layer"
+	class="konva"
+	>
+</div>
+		`,
+		im_below: `
+<div v-if="selectedIdx != null && selectedIdx >= 0 && selectedIdx < shapes[frameIdx].length" class="mb-2">
+	<p>
+		<strong>Selection: {{ shapes[frameIdx][selectedIdx].Type }} ({{ shapes[frameIdx][selectedIdx].Points }})</strong>
+		<button v-if="deleteSelectionHandler" type="button" class="btn btn-sm btn-danger" v-on:click="deleteSelectionHandler">Delete</button>
+	</p>
+	<div class="small-container">
+		<div class="form-group row">
+			<label class="col-sm-2 col-form-label">Category</label>
+			<div class="col-sm-10">
+				<select class="form-select" v-model="shapes[frameIdx][selectedIdx].Category">
+					<option value="">None</option>
+					<template v-for="category in params.Categories">
+						<option :key="category" :value="category">{{ category }}</option>
+					</template>
+				</select>
+			</div>
+		</div>
+		<div class="form-group row">
+			<label class="col-sm-2 col-form-label">Track ID</label>
+			<div class="col-sm-10">
+				<input type="text" class="form-control" v-model="shapes[frameIdx][selectedIdx].TrackID" />
+			</div>
+		</div>
+	</div>
+</div>
+		`,
+	},
+});
