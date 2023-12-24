@@ -55,4 +55,42 @@ export default {
 		utils.request(this, 'GET', '/exec-nodes', null, (nodeList) => {
 			let nodes = {};
 			for(let node of nodeList) {
-				node
+				nodes[node.ID] = node;
+			}
+			this.nodes = nodes;
+		});
+	},
+	methods: {
+		fetch: function() {
+			utils.request(this, 'GET', '/annotate-datasets', null, (data) => {
+				this.annosets = data;
+			});
+		},
+		removeAnnoset: function(annoset) {
+			utils.request(this, 'DELETE', '/annotate-datasets/'+annoset.ID, null, () => {
+				this.fetch();
+			});
+		},
+	},
+	computed: {
+		// Format the Inputs of annotation datasets.
+		niceInputs: function() {
+			let setToNice = {};
+			for(let set of this.annosets) {
+				let names = [];
+				for(let input of set.Inputs) {
+					if(input.Type == 'd' && this.datasets[input.ID]) {
+						names.push(this.datasets[input.ID].Name);
+					} else if(input.Type == 'n' && this.nodes[input.ID]) {
+						names.push(this.nodes[input.ID].Name + ' [' + input.Name + ']');
+					} else {
+						names.push('Unknown');
+					}
+				}
+				setToNice[set.ID] = names.join(', ');
+			}
+			return setToNice;
+		},
+	},
+};
+</script>
