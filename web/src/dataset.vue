@@ -49,3 +49,24 @@ export default {
 		this.datasetID = this.$route.params.dsid;
 		utils.request(this, 'GET', '/datasets/'+this.datasetID, null, (dataset) => {
 			this.dataset = dataset;
+
+			this.$store.commit('setRouteData', {
+				dataset: this.dataset,
+			});
+		});
+		this.fetchItems();
+	},
+	methods: {
+		fetchItems: function() {
+			utils.request(this, 'GET', '/datasets/'+this.datasetID+'/items', null, (items) => {
+				this.items = items;
+			});
+		},
+		deleteItem: function(key) {
+			utils.request(this, 'DELETE', '/datasets/'+this.datasetID+'/items/'+key, null, () => {
+				this.fetchItems();
+			});
+		},
+	},
+};
+</script>
