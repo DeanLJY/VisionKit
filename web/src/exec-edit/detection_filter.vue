@@ -36,4 +36,47 @@
 </template>
 
 <script>
-impor
+import utils from '../utils.js';
+
+export default {
+	data: function() {
+		return {
+			categories: [],
+			score: 0,
+
+			addCategoryInput: '',
+		};
+	},
+	props: ['node'],
+	created: function() {
+		try {
+			let s = JSON.parse(this.node.Params);
+			this.categories = s.Categories;
+			this.score = s.Score;
+		} catch(e) {}
+	},
+	methods: {
+		save: function() {
+			let params = JSON.stringify({
+				Categories: this.categories,
+				Score: this.score,
+			});
+			utils.request(this, 'POST', '/exec-nodes/'+this.node.ID, JSON.stringify({
+				Params: params,
+			}), () => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/pipeline');
+			});
+		},
+		addCategory: function() {
+			if(this.addCategoryInput === '') {
+				return;
+			}
+			this.categories.push(this.addCategoryInput);
+			this.addCategoryInput = '';
+		},
+		removeCategory: function(i) {
+			this.categories.splice(i, 1);
+		},
+	},
+};
+</script>
