@@ -70,4 +70,17 @@ export default {
 	},
 	methods: {
 		save: function() {
-			let params
+			let params = JSON.stringify({
+				Start: this.start,
+				CropDims: this.cropDims,
+				ResizeDims: this.resizeDims,
+			});
+			utils.request(this, 'POST', '/exec-nodes/'+this.node.ID, JSON.stringify({
+				Params: params,
+			}), () => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/pipeline');
+			});
+		},
+	},
+};
+</script>
