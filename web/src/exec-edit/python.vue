@@ -239,3 +239,45 @@ ALL_DOC
 				}
 				doc += "\t'''";
 				return doc;
+			}
+
+			// update template
+			tmpl = tmpl.replaceAll('ARGLIST', variableNames.join(', '));
+			tmpl = tmpl.replace('PER_FRAME_DOC', getDoc('per_frame'));
+			tmpl = tmpl.replace('ALL_DOC', getDoc('all'));
+
+			this.code = tmpl;
+		},
+
+		// modifying outputs
+		resetForm: function() {
+			this.addOutputForm = {
+				name: '',
+				dataType: '',
+			};
+		},
+		addOutput: function() {
+			this.outputs.push({
+				Name: this.addOutputForm.name,
+				DataType: this.addOutputForm.dataType,
+			});
+			this.resetForm();
+		},
+		removeOutput: function(i) {
+			this.outputs.splice(i, 1);
+		},
+
+		save: function() {
+			let params = {
+				Code: this.code,
+				Outputs: this.outputs,
+			};
+			utils.request(this, 'POST', '/exec-nodes/'+this.node.ID, JSON.stringify({
+				Params: JSON.stringify(params),
+			}), () => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/pipeline');
+			});
+		},
+	},
+};
+</script>
