@@ -38,4 +38,50 @@ export default {
 	created: function() {
 		try {
 			let s = JSON.parse(this.value);
-			if(s.InputOption
+			if(s.InputOptions) {
+				this.inputOptions = s.InputOptions;
+			}
+			if(s.ValPercent) {
+				this.valPercent = s.ValPercent;
+			}
+		} catch(e) {}
+
+		// fetch parents to get details on the datasets for which the user can configure input options
+
+		// given an array of objects, get index of the object in the array
+		// that has a certain value at some key
+		let getIndexByKeyValue = function(array, key, value) {
+			let index = -1;
+			array.forEach((obj, i) => {
+				if(obj[key] != value) {
+					return;
+				}
+				index = i;
+			});
+			return index;
+		};
+
+		let inputs = [];
+		if(this.node.Parents) {
+			inputs = this.node.Parents['inputs'];
+		}
+		while(this.inputOptions.length < inputs.length) {
+			this.inputOptions.push({});
+		}
+		this.parents = [];
+		inputs.forEach((parent, idx) => {
+			this.parents.push({
+				Name: 'unknown',
+				DataType: 'unknown',
+			});
+			if(parent.Type == 'n') {
+				utils.request(this, 'GET', '/exec-nodes/'+parent.ID, null, (node) => {
+					this.parents[idx].Name = node.Name;
+					let index = getIndexByKeyValue(node.Outputs, 'Name', parent.Name);
+					this.parents[idx].DataType = node.Outputs[index].DataType;
+				});
+			} else if(parent.Type == 'd') {
+				utils.request(this, 'GET', '/datasets/'+parent.ID, null, (ds) => {
+					this.parents[idx].Name = ds.Name;
+					this.parents[idx].DataType = ds.DataType;
+				});
