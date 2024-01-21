@@ -85,3 +85,17 @@ export default {
 					this.parents[idx].Name = ds.Name;
 					this.parents[idx].DataType = ds.DataType;
 				});
+			}
+		});
+		this.update();
+	},
+	methods: {
+		update: function() {
+			this.$emit('input', JSON.stringify({
+				InputOptions: this.inputOptions,
+				ValPercent: this.valPercent,
+			}));
+		},
+	},
+};
+</script>
