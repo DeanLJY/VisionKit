@@ -146,4 +146,46 @@
 </template>
 
 <script>
-import utils from
+import utils from '../utils.js';
+
+export default {
+	data: function() {
+		return {
+			p: {},
+		};
+	},
+	props: ['node', 'value'],
+	created: function() {
+		let p = {};
+		try {
+			let s = JSON.parse(this.value);
+			p = s;
+		} catch(e) {}
+		if(!p.LearningRate) p.LearningRate = 0.001;
+		if(!p.Optimizer) p.Optimizer = 'adam';
+		if(!p.BatchSize) p.BatchSize = 1;
+		if(!p.AutoBatchSize) p.AutoBatchSize = true;
+		if(!p.StopCondition) p.StopCondition = {};
+		if(!p.StopCondition.MaxEpochs) p.StopCondition.MaxEpochs = 0;
+		if(!p.StopCondition.ScoreEpsilon) p.StopCondition.ScoreEpsilon = 0;
+		if(!p.StopCondition.ScoreMaxEpochs) p.StopCondition.ScoreMaxEpochs = 25;
+		if(!p.ModelSaver) p.ModelSaver = {};
+		if(!p.ModelSaver.Mode) p.ModelSaver.Mode = 'best';
+		if(!p.RateDecay) p.RateDecay = {};
+		if(!p.RateDecay.Op) p.RateDecay.Op = '';
+		if(!p.RateDecay.StepSize) p.RateDecay.StepSize = 1;
+		if(!p.RateDecay.StepGamma) p.RateDecay.StepGamma = 0.1;
+		if(!p.RateDecay.PlateauFactor) p.RateDecay.PlateauFactor = 0.1;
+		if(!p.RateDecay.PlateauPatience) p.RateDecay.PlateauPatience = 10;
+		if(!p.RateDecay.PlateauThreshold) p.RateDecay.PlateauThreshold = 0;
+		if(!p.RateDecay.PlateauMin) p.RateDecay.PlateauMin = 0.0001;
+		this.p = p;
+		this.update();
+	},
+	methods: {
+		update: function() {
+			this.$emit('input', JSON.stringify(this.p));
+		},
+	},
+};
+</script>
