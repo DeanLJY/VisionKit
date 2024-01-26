@@ -109,4 +109,41 @@
 			<label class="col-sm-4 col-form-label">Gamma</label>
 			<div class="col-sm-8">
 				<input v-model.number="p.RateDecay.PlateauFactor" type="text" class="form-control" @change="update">
-		
+				<small class="form-text text-muted">
+					Multiply the learning rate by this factor when a plateau is detected.
+				</small>
+			</div>
+		</div>
+		<div class="form-group row">
+			<label class="col-sm-4 col-form-label">Patience</label>
+			<div class="col-sm-8">
+				<input v-model.number="p.RateDecay.PlateauPatience" type="text" class="form-control" @change="update">
+				<small class="form-text text-muted">
+					Wait for no improvement for this many epochs before reducing the learning rate.
+				</small>
+			</div>
+		</div>
+		<div class="form-group row">
+			<label class="col-sm-4 col-form-label">Plateau Epsilon</label>
+			<div class="col-sm-8">
+				<input v-model.number="p.RateDecay.PlateauThreshold" type="text" class="form-control" @change="update">
+				<small class="form-text text-muted">
+					Score improvements less than this threshold are still considered a plateau.
+				</small>
+			</div>
+		</div>
+		<div class="form-group row">
+			<label class="col-sm-4 col-form-label">Minimum Learning Rate</label>
+			<div class="col-sm-8">
+				<input v-model.number="p.RateDecay.PlateauMin" type="text" class="form-control" @change="update">
+				<small class="form-text text-muted">
+					Don't reduce the learning rate below this value.
+				</small>
+			</div>
+		</div>
+	</template>
+</div>
+</template>
+
+<script>
+import utils from
