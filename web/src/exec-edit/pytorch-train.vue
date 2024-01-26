@@ -76,4 +76,37 @@
 	<h3>Rate Decay</h3>
 	<div class="form-group row">
 		<label class="col-sm-4 col-form-label">Rate Decay Mode</label>
-		<div class="col-sm-
+		<div class="col-sm-8">
+			<select v-model="p.RateDecay.Op" class="form-select" @change="update">
+				<option value="">None (constant learning rate)</option>
+				<option value="step">Step (reduce rate by a factor every few epochs)</option>
+				<option value="plateau">Plateau (reduce rate if score isn't improving)</option>
+			</select>
+		</div>
+	</div>
+	<template v-if="p.RateDecay.Op == 'step'">
+		<div class="form-group row">
+			<label class="col-sm-4 col-form-label">Step Size</label>
+			<div class="col-sm-8">
+				<input v-model.number="p.RateDecay.StepSize" type="text" class="form-control" @change="update">
+				<small class="form-text text-muted">
+					Reduce learning rate each time this many epochs have elapsed.
+				</small>
+			</div>
+		</div>
+		<div class="form-group row">
+			<label class="col-sm-4 col-form-label">Gamma</label>
+			<div class="col-sm-8">
+				<input v-model.number="p.RateDecay.StepGamma" type="text" class="form-control" @change="update">
+				<small class="form-text text-muted">
+					To reduce learning rate, multiply it by this factor.
+				</small>
+			</div>
+		</div>
+	</template>
+	<template v-if="p.RateDecay.Op == 'plateau'">
+		<div class="form-group row">
+			<label class="col-sm-4 col-form-label">Gamma</label>
+			<div class="col-sm-8">
+				<input v-model.number="p.RateDecay.PlateauFactor" type="text" class="form-control" @change="update">
+		
