@@ -36,4 +36,44 @@
 									<input class="form-control" type="text" v-model="addForms.inputOptions" />
 								</td>
 								<td>
-	
+									<button type="button" class="btn btn-primary" v-on:click="addInput">Add</button>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div class="form-group row">
+				<label class="col-sm-2 col-form-label">Outputs</label>
+				<div class="col-sm-10">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Component</th>
+								<th>Layer</th>
+								<th>Data Type</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="(spec, i) in params.outputDatasets">
+								<td>
+									<template v-if="getComponent(spec.ComponentIdx)">{{ getComponent(spec.ComponentIdx).ID }}</template>
+									<template v-else>Component {{ spec.ComponentIdx }}</template>
+								</td>
+								<td>{{ spec.Layer }}</td>
+								<td>{{ spec.DataType }}</td>
+								<td>
+									<button type="button" class="btn btn-danger" v-on:click="removeOutput(i)">Remove</button>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<select v-model="addForms.outputComponentIdx" class="form-select">
+										<template v-for="(compSpec, compIdx) in arch.Params.Components">
+											<option v-if="compSpec.ID in comps" :key="compIdx" :value="compIdx">{{ comps[compSpec.ID].ID }}</option>
+										</template>
+									</select>
+								</td>
+								<td>
+									<template v-if="ge
