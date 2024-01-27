@@ -76,4 +76,61 @@
 									</select>
 								</td>
 								<td>
-									<template v-if="ge
+									<template v-if="getComponent(addForms.outputComponentIdx)">
+										<select v-model="addForms.outputLayer" class="form-select">
+											<template v-for="(_, layer) in getComponent(addForms.outputComponentIdx).Params.Outputs">
+												<option :key="layer" :value="layer">{{ layer }}</option>
+											</template>
+										</select>
+									</template>
+								</td>
+								<td></td>
+								<td>
+									<button type="button" class="btn btn-primary" v-on:click="addOutput">Add</button>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</template>
+		<button v-on:click="save" type="button" class="btn btn-primary">Save</button>
+	</template>
+</div>
+</template>
+
+<script>
+import utils from '../utils.js';
+
+export default {
+	data: function() {
+		return {
+			params: {
+				archID: '',
+				inputOptions: [],
+				outputDatasets: [],
+			},
+			// list of {Name, DataType}
+			parents: [],
+			archs: {},
+			comps: {},
+			addForms: null,
+		};
+	},
+	props: ['node'],
+	created: function() {
+		this.resetForm();
+
+		utils.request(this, 'GET', '/pytorch/archs', null, (archs) => {
+			archs.forEach((arch) => {
+				this.$set(this.archs, arch.ID, arch);
+			});
+		});
+		utils.request(this, 'GET', '/pytorch/components', null, (comps) => {
+			comps.forEach((comp) => {
+				this.$set(this.comps, comp.ID, comp);
+			});
+		});
+
+		try {
+			let s = JSON.pars
