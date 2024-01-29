@@ -30,4 +30,33 @@ export default PytorchTrainGeneric({
 				<option value="resnet34">Resnet34</option>
 				<option value="resnet50">Resnet50</option>
 				<option value="resnet101">Resnet101</option>
-				<option value="resnet152">Re
+				<option value="resnet152">Resnet152</option>
+			</select>
+			<small class="form-text text-muted">
+				Select a model architecture. For example, Resnet34 consists of 34 layers, and is suitable for small to medium sized datasets.
+			</small>
+		</div>
+	</div>
+	<div class="row mb-2">
+		<label class="col-sm-4 col-form-label">Number of Classes</label>
+		<div class="col-sm-8">
+			<input v-model.number="params.NumClasses" type="text" class="form-control">
+			<small class="form-text text-muted">
+				The number of image classification categories, or 0 to take it from the label dataset metadata.
+			</small>
+		</div>
+	</div>
+	<div class="row mb-2">
+		<label class="col-sm-4 col-form-label">Validation Percentage</label>
+		<div class="col-sm-8">
+			<input v-model.number="params.ValPercent" type="text" class="form-control">
+			<small class="form-text text-muted">
+				Use this percentage of the input data for validation. The rest will be used for training.
+			</small>
+		</div>
+	</div>
+	<hr />
+	<select-input-size v-model="params.Resize"></select-input-size>
+</div>
+	`,
+});
