@@ -185,4 +185,54 @@ export default {
 	methods: {
 		resetForm: function() {
 			this.addForms = {
-				inputIdx: '
+				inputIdx: '',
+				inputOptions: '',
+				outputComponentIdx: '',
+				outputLayer: '',
+			};
+		},
+		save: function() {
+			let params = {
+				ArchID: this.params.archID,
+				InputOptions: this.params.inputOptions,
+				OutputDatasets: this.params.outputDatasets,
+			};
+			utils.request(this, 'POST', '/exec-nodes/'+this.node.ID, JSON.stringify({
+				Params: JSON.stringify(params),
+			}), () => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/pipeline');
+			});
+		},
+		addInput: function() {
+			this.params.inputOptions.push({
+				Idx: parseInt(this.addForms.inputIdx),
+				Value: this.addForms.inputOptions,
+			});
+			this.resetForm();
+		},
+		removeInput: function(i) {
+			this.params.inputOptions.splice(i, 1);
+		},
+		addOutput: function() {
+			let componentIdx = parseInt(this.addForms.outputComponentIdx);
+			let layer = this.addForms.outputLayer;
+			this.params.outputDatasets.push({
+				ComponentIdx: componentIdx,
+				Layer: layer,
+				DataType: this.getComponent(componentIdx).Params.Outputs[layer],
+			});
+			this.resetForm();
+		},
+		removeOutput: function(i) {
+			this.params.outputDatasets.splice(i, 1);
+		},
+		getComponent: function(compIdx) {
+			if(compIdx === '') {
+				return null;
+			}
+			compIdx = parseInt(compIdx);
+			if(!this.arch) {
+				return null;
+			}
+			if(compIdx >= this.arch.Params.Components.length) {
+	
