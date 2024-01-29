@@ -235,4 +235,16 @@ export default {
 				return null;
 			}
 			if(compIdx >= this.arch.Params.Components.length) {
-	
+				return null;
+			}
+			let compID = this.arch.Params.Components[compIdx].ID;
+			return this.comps[compID];
+		},
+	},
+	computed: {
+		arch: function() {
+			return this.archs[this.params.archID];
+		},
+	},
+};
+</script>
