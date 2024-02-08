@@ -33,4 +33,29 @@ export default {
 	created: function() {
 		let params = {};
 		try {
-			le
+			let s = JSON.parse(this.node.Params);
+			params = s;
+		} catch(e) {}
+		if(!('Resize' in params)) {
+			params.Resize = {
+				Mode: 'scale-down',
+				MaxDimension: 640,
+				Width: 416,
+				Height: 416,
+				Multiple: 32,
+			};
+		}
+		if(!('ConfidenceThreshold' in params)) params.ConfidenceThreshold = 0.1;
+		this.params = params;
+	},
+	methods: {
+		save: function() {
+			utils.request(this, 'POST', '/exec-nodes/'+this.node.ID, JSON.stringify({
+				Params: JSON.stringify(this.params),
+			}), () => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/pipeline');
+			});
+		},
+	},
+};
+</script>
