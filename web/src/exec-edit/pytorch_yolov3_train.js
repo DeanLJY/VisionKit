@@ -36,4 +36,16 @@ export default PytorchTrainGeneric({
 		</div>
 	</div>
 	<div class="row mb-2">
-		<label class="col-sm-4 col-form-label">Validati
+		<label class="col-sm-4 col-form-label">Validation Percentage</label>
+		<div class="col-sm-8">
+			<input v-model.number="params.ValPercent" type="text" class="form-control">
+			<small class="form-text text-muted">
+				Use this percentage of the input data for validation. The rest will be used for training.
+			</small>
+		</div>
+	</div>
+	<hr />
+	<select-input-size v-model="params.Resize"></select-input-size>
+</div>
+	`,
+});
