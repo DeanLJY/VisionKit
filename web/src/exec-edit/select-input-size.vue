@@ -79,4 +79,22 @@ export default {
 	created: function() {
 		let params = {};
 		if(this.value) {
-			for(let [k, v] of Objec
+			for(let [k, v] of Object.entries(this.value)) {
+				params[k] = v;
+			}
+		}
+		if(!('Mode' in params)) params['Mode'] = 'keep';
+		if(!('MaxDimension' in params)) params['MaxDimension'] = 640;
+		if(!('Width' in params)) params['Width'] = 256;
+		if(!('Height' in params)) params['Height'] = 256;
+		if(!('Multiple' in params)) params['Multiple'] = 1;
+		this.params = params;
+	},
+	methods: {
+		update: function() {
+			this.$emit('input', this.params);
+			this.$emit('change');
+		},
+	},
+};
+</script>
