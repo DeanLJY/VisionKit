@@ -25,4 +25,40 @@
 </template>
 
 <script>
-import util
+import utils from '../utils.js';
+
+export default {
+	data: function() {
+		return {
+			velocitySteps: 5,
+			minIOU: 0.1,
+			maxAge: 10,
+
+			addCategoryInput: '',
+		};
+	},
+	props: ['node'],
+	created: function() {
+		try {
+			let s = JSON.parse(this.node.Params);
+			this.velocitySteps = s.VelocitySteps;
+			this.minIOU = s.MinIOU;
+			this.maxAge = s.MaxAge;
+		} catch(e) {}
+	},
+	methods: {
+		save: function() {
+			let params = JSON.stringify({
+				VelocitySteps: parseInt(this.velocitySteps),
+				MinIOU: parseFloat(this.minIOU),
+				MaxAge: parseInt(this.maxAge),
+			});
+			utils.request(this, 'POST', '/exec-nodes/'+this.node.ID, JSON.stringify({
+				Params: params,
+			}), () => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/pipeline');
+			});
+		},
+	},
+};
+</script>
