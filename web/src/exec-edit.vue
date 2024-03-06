@@ -38,4 +38,48 @@ import Split from './exec-edit/split.vue';
 import ReidTracker from './exec-edit/reid_tracker.vue';
 import Resample from './exec-edit/resample.vue';
 import Yolov3Train from './exec-edit/yolov3_train.vue';
-import Yolov3In
+import Yolov3Infer from './exec-edit/yolov3_infer.vue';
+import UnsupervisedReid from './exec-edit/unsupervised_reid.js';
+import VideoSample from './exec-edit/video_sample.vue';
+
+let components = {
+	'cropresize': CropResize,
+	'detection_filter': DetectionFilter,
+	'extract_polygons': ExtractPolygons,
+	'geoimage_to_image': GeoImageToImage,
+	'make_geoimage': MakeGeoImage,
+	'python': Python,
+	'pytorch_train': PytorchTrain,
+	'pytorch_infer': PytorchInfer,
+	'pytorch_resnet_train': PytorchResnetTrain,
+	'pytorch_resnet_infer': PytorchResnetInfer,
+	'pytorch_ssd_train': PytorchSsdTrain,
+	'pytorch_ssd_infer': PytorchSsdInfer,
+	'pytorch_unet_train': PytorchUnetTrain,
+	'pytorch_unet_infer': PytorchUnetInfer,
+	'pytorch_yolov3_train': PytorchYolov3Train,
+	'pytorch_yolov3_infer': PytorchYolov3Infer,
+	'pytorch_yolov5_train': PytorchYolov5Train,
+	'pytorch_yolov5_infer': PytorchYolov5Infer,
+	'sample': Sample,
+	'segmentation_mask': SegmentationMask,
+	'simple_tracker': SimpleTracker,
+	'split': Split,
+	'reid_tracker': ReidTracker,
+	'resample': Resample,
+	'yolov3_train': Yolov3Train,
+	'yolov3_infer': Yolov3Infer,
+	'unsupervised_reid': UnsupervisedReid,
+	'video_sample': VideoSample,
+};
+
+export default {
+	components: components,
+	data: function() {
+		return {
+			node: null,
+			components: Object.keys(components),
+		};
+	},
+	created: function() {
+		utils.request(this, 'GET', '/exec-no
