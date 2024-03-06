@@ -80,4 +80,8 @@ export default {
 				Params: JSON.stringify(this.params),
 			}), () => {
 				this.$router.push('/ws/'+this.$route.params.ws+'/pipeline');
-	
+			});
+		},
+	},
+};
+</script>
