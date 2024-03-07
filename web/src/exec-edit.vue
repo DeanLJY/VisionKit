@@ -82,4 +82,13 @@ export default {
 		};
 	},
 	created: function() {
-		utils.request(this, 'GET', '/exec-no
+		utils.request(this, 'GET', '/exec-nodes/'+this.$route.params.nodeid, null, (node) => {
+			this.node = node;
+
+			this.$store.commit('setRouteData', {
+				node: this.node,
+			});
+		});
+	},
+};
+</script>
