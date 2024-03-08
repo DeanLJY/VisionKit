@@ -139,4 +139,25 @@ export default {
 		}
 	},
 	methods: {
-		// if isVar
+		// if isVariable
+		add: function() {
+			this.$emit('add', this.optionToObj[this.selected]);
+			this.selected = '';
+		},
+
+		// if NOT isVariable
+		parentChanged: function() {
+			if(!this.selected) {
+				this.$emit('set', null);
+			} else {
+				this.$emit('set', this.optionToObj[this.selected]);
+			}
+		},
+	},
+	watch: {
+		node: function() {
+			this.selected = '';
+		},
+	},
+};
+</script>
