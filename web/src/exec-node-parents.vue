@@ -84,3 +84,59 @@ export default {
 		let isTypeOK = (dt) => {
 			return !dataTypeSet || dataTypeSet[dt];
 		};
+
+		// helper function to serialize an ExecParent
+		let objToKey = (obj) => {
+			let key = obj.Type + ',' + obj.ID;
+			if(obj.Type == 'n') {
+				key += ',' + obj.Name;
+			}
+			return key;
+		};
+
+		// add options based on datasets and nodes
+		for(let dsID in this.datasets) {
+			let ds = this.datasets[dsID];
+			if(ds.Type == 'computed' || !isTypeOK(ds.DataType)) {
+				continue;
+			}
+			let label = 'Dataset: ' + ds.Name;
+			let obj = {
+				'Type': 'd',
+				'ID': ds.ID,
+				'DataType': ds.DataType
+			};
+			let key = objToKey(obj);
+			this.options[key] = label;
+			this.optionToObj[key] = obj;
+		}
+		for(let nodeID in this.nodes) {
+			if(nodeID == this.node.ID) {
+				continue;
+			}
+			let node = this.nodes[nodeID];
+			node.Outputs.forEach((output) => {
+				if(!isTypeOK(output.DataType)) {
+					return;
+				}
+				let label = 'Node: ' + node.Name + '['+output.Name+']';
+				let obj = {
+					'Type': 'n',
+					'ID': node.ID,
+					'Name': output.Name,
+					'DataType': output.DataType,
+				};
+				let key = objToKey(obj);
+				this.options[key] = label;
+				this.optionToObj[key] = obj;
+			});
+		}
+
+		// if this is non-variable, we need to set selected with the current parent, if any
+		if(!this.isVariable && this.parents.length > 0) {
+			let parent = this.parents[0];
+			this.selected = objToKey(parent);
+		}
+	},
+	methods: {
+		// if isVar
