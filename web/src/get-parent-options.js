@@ -28,4 +28,12 @@ export default function(ws, comp, callback) {
 						ID: node.ID,
 						Name: output.Name,
 						DataType: output.DataType,
-						Label: 'Node: ' + node.Name + '['+out
+						Label: 'Node: ' + node.Name + '['+output.Name+']',
+					});
+				}
+			}
+		}),
+	]).then(() => {
+		callback(options);
+	});
+};
