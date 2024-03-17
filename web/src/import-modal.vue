@@ -63,4 +63,27 @@
 							<template v-if="percent === null">
 								<form v-on:submit.prevent="submitUpload">
 									<div class="row mb-2">
-										<label class="col-sm-2 col-form-labe
+										<label class="col-sm-2 col-form-label">File</label>
+										<div class="col-sm-10">
+											<input class="form-control" type="file" @change="onFileChange" required />
+											<small class="form-text text-muted">
+												<template v-if="mode == 'add'">
+													<template v-if="dataset.DataType == 'video'">
+														Video files (e.g., mp4) or a zip file that contains them.
+													</template>
+													<template v-else-if="dataset.DataType == 'image'">
+														Image files (PNG or JPG) or a zip file that contains them.
+													</template>
+													<template v-else-if="dataset.DataType == 'detection' || dataset.DataType == 'int' || dataset.DataType == 'shape' || dataset.DataType == 'floats'">
+														Data in SkyhookML JSON format (either .json file or zip file containing .json).
+														To import data in other formats, use <router-link :to="'/ws/'+$route.params.ws+'/quickstart/import'">Quickstart/Import</router-link>.
+													</template>
+													<template v-else-if="dataset.DataType == 'file'">
+														Either files or a zip file.
+													</template>
+													<template v-else>
+														Data in a SkyhookML-supported format.
+														To import data in other formats, use <router-link :to="'/ws/'+$route.params.ws+'/quickstart/import'">Quickstart/Import</router-link>.
+													</template>
+												</template>
+									
