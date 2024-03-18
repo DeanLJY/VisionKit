@@ -86,4 +86,44 @@
 														To import data in other formats, use <router-link :to="'/ws/'+$route.params.ws+'/quickstart/import'">Quickstart/Import</router-link>.
 													</template>
 												</template>
+												<template v-else-if="mode == 'new'">
+													A SkyhookML-formatted dataset archive (.zip containing db.sqlite3 and files).
+												</template>
+											</small>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-sm-10">
+											<button type="submit" class="btn btn-primary">Import</button>
+										</div>
+									</div>
+								</form>
+							</template>
+							<template v-else>
+								<h2>Uploading...</h2>
+								<div class="mt-2">
+									<div class="progress">
+										<div
+											class="progress-bar"
+											role="progressbar"
+											v-bind:style="{width: percent+'%'}"
+											:aria-valuenow="percent"
+											aria-valuemin="0"
+											aria-valuemax="100"
+											>
+											{{ percent }}%
+										</div>
+									</div>
+								</div>
+							</template>
+						</div>
+						<div class="tab-pane" id="import-url-tab">
+							<form v-on:submit.prevent="submitURL">
+								<div class="row mb-2">
+									<label class="col-sm-2 col-form-label">URL</label>
+									<div class="col-sm-10">
+										<input class="form-control" type="text" v-model="url" required />
+										<small class="form-text text-muted">
+											<template v-if="mode == 'add'">
+												The URL of a zip file from which to import files.
 									
