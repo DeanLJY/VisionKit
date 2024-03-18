@@ -126,4 +126,67 @@
 										<small class="form-text text-muted">
 											<template v-if="mode == 'add'">
 												The URL of a zip file from which to import files.
-									
+											</template>
+											<template v-if="mode == 'new'">
+												The URL of a SkyhookML-formatted dataset archive (.zip containing db.sqlite3 and files).
+											</template>
+										</small>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-10">
+										<button type="submit" class="btn btn-primary">Import</button>
+									</div>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</span>
+</template>
+
+<script>
+import utils from './utils.js';
+
+export default {
+	data: function() {
+		return {
+			path: '',
+			symlink: false,
+			file: null,
+			percent: null,
+			url: null,
+
+			// either /datasets/[ID]/import or /import-dataset depending on mode
+			importEndpoint: '',
+		};
+	},
+	props: [
+		// 'add' if we're adding to an existing dataset
+		// 'new' if we're importing a Skyhook export as a new dataset
+		'mode',
+
+		// the dataset object, only if mode='add'
+		'dataset',
+	],
+	created: function() {
+		if(this.mode == 'add') {
+			this.importEndpoint = '/datasets/'+this.dataset.ID+'/import';
+		} else if(this.mode == 'new') {
+			this.importEndpoint = '/import-dataset';
+		}
+	},
+	mounted: function() {
+		$(this.$refs.modal).on('shown.bs.modal', () => {
+			$(this.$refs.modal).focus();
+		});
+	},
+	methods: {
+		click: function() {
+			this.path = '';
+			this.file = null;
+			this.percent = null;
+			$(this.$refs.mo
