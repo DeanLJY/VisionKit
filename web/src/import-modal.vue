@@ -239,4 +239,14 @@ export default {
 		},
 		submitURL: function() {
 			let params = {
-				mod
+				mode: 'url',
+				url: this.url,
+			};
+			utils.request(this, 'POST', this.importEndpoint+'?mode=url', params, (job) => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/jobs/'+job.ID);
+			});
+			$(this.$refs.modal).modal('hide');
+		},
+	},
+};
+</script>
