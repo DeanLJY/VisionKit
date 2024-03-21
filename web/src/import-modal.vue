@@ -189,4 +189,54 @@ export default {
 			this.path = '';
 			this.file = null;
 			this.percent = null;
-			$(this.$refs.mo
+			$(this.$refs.modal).modal('show');
+		},
+		onFileChange: function(event) {
+			this.file = event.target.files[0];
+		},
+		submitLocal: function() {
+			let params = {
+				mode: 'local',
+				path: this.path,
+				symlink: this.symlink,
+			};
+			utils.request(this, 'POST', this.importEndpoint+'?mode=local', params, (job) => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/jobs/'+job.ID);
+			});
+			$(this.$refs.modal).modal('hide');
+		},
+		submitUpload: function() {
+			var data = new FormData();
+			data.append('file', this.file);
+			this.percent = 0;
+			$.ajax({
+				type: 'POST',
+				url: this.importEndpoint+'?mode=upload',
+				error: (req, status, errorMsg) => {
+					this.percent = null;
+					$(this.$refs.modal).modal('hide');
+					app.setError(errorMsg);
+				},
+				data: data,
+				processData: false,
+				contentType: false,
+				xhr: () => {
+					var xhr = new window.XMLHttpRequest();
+					xhr.upload.addEventListener('progress', (e) => {
+						if(!e.lengthComputable) {
+							return;
+						}
+						this.percent = Math.min(parseInt(e.loaded * 100 / e.total), 99);
+					});
+					return xhr;
+				},
+				success: (job) => {
+					this.percent = null;
+					$(this.$refs.modal).modal('hide');
+					this.$router.push('/ws/'+this.$route.params.ws+'/jobs/'+job.ID);
+				},
+			});
+		},
+		submitURL: function() {
+			let params = {
+				mod
