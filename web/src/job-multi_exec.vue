@@ -47,4 +47,47 @@
 <script>
 import utils from './utils.js';
 import JobConsoleProgress from './job-consoleprogress.vue';
-import
+import JobPytorchTrain from './job-pytorch_train.vue';
+import JobFooter from './job-footer.vue';
+
+export default {
+	components: {
+		'job-consoleprogress': JobConsoleProgress,
+		'job-pytorch_train': JobPytorchTrain,
+		'job-footer': JobFooter,
+	},
+	data: function() {
+		return {
+			multiJob: null,
+			curJob: null,
+			plan: [],
+			planIndex: 0,
+		};
+	},
+	props: ['jobID'],
+	created: function() {
+		this.fetch();
+		this.interval = setInterval(this.fetch, 1000);
+	},
+	destroyed: function() {
+		clearInterval(this.interval);
+	},
+	methods: {
+		fetch: function() {
+			utils.request(this, 'POST', '/jobs/'+this.jobID+'/state', null, (response) => {
+				this.multiJob = response.Job;
+				let state;
+				try {
+					state = JSON.parse(response.State);
+				} catch(e) {}
+				if(!state) {
+					return;
+				}
+				this.curJob = state.CurJob;
+				this.plan = state.Plan;
+				this.planIndex = state.PlanIndex;
+			});
+		},
+	},
+};
+</script>
