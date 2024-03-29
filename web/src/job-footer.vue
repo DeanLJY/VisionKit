@@ -22,4 +22,14 @@
 <script>
 import utils from './utils.js';
 
-// Shared component for stop button if job is
+// Shared component for stop button if job is still running, or a message if it's done.
+
+export default {
+	props: ['job'],
+	methods: {
+		stopJob: function() {
+			utils.request(this, 'POST', '/jobs/'+this.job.ID+'/stop');
+		},
+	},
+};
+</script>
