@@ -72,4 +72,48 @@ export default {
 			}
 			if(!this.chart) {
 				let labels = [];
-				for(let i = 
+				for(let i = 0; i < n; i++) {
+					labels.push('Epoch ' + i);
+				}
+				let config = {
+					type: 'line',
+					data: {
+						labels: labels,
+						datasets: [{
+							label: 'Train Loss',
+							data: modelState.TrainLoss,
+							fill: false,
+							backgroundColor: 'blue',
+							borderColor: 'blue',
+						}, {
+							label: 'Validation Loss',
+							data: modelState.ValLoss,
+							fill: false,
+							backgroundColor: 'red',
+							borderColor: 'red',
+						}]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+					},
+				};
+				let ctx = this.$refs.layer.getContext('2d');
+				this.chart = new Chart(ctx, config);
+			} else {
+				// update chart with only the new history
+				for(let i = prevN; i < n; i++) {
+					this.chart.data.labels.push('Epoch ' + i);
+					this.chart.data.datasets[0].data.push(modelState.TrainLoss[i]);
+					this.chart.data.datasets[1].data.push(modelState.ValLoss[i]);
+				}
+				this.chart.update();
+			}
+			this.modelState = modelState;
+		},
+		stopTraining: function() {
+			// We provide functionality to terminate the job while marking the dataset
+			// done so that the user doesn't have to wait a long time for training to
+			// complete if they are satisfied with the model performance.
+			// This is NOT recommended since it breaks the (non-deterministic)
+			// reproducibility of pipelines, but it se
