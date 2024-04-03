@@ -39,4 +39,54 @@
 			</tr>
 		</tbody>
 	</table>
-</d
+</div>
+</template>
+
+<script>
+import utils from './utils.js';
+
+export default {
+	data: function() {
+		return {
+			archs: [],
+			addForm: {},
+		};
+	},
+	props: ['mtab'],
+	created: function() {
+		this.fetch();
+	},
+	methods: {
+		fetch: function() {
+			utils.request(this, 'GET', '/pytorch/archs', null, (data) => {
+				this.archs = data;
+			});
+		},
+		showAddModal: function() {
+			this.addForm = {
+				id: '',
+			};
+			$(this.$refs.addModal).modal('show');
+		},
+		add: function() {
+			utils.request(this, 'POST', '/pytorch/archs', this.addForm, () => {
+				$(this.$refs.addModal).modal('hide');
+				this.fetch();
+			});
+		},
+		deleteArch: function(archID) {
+			utils.request(this, 'DELETE', '/pytorch/archs/'+archID, null, () => {
+				this.fetch();
+			});
+		},
+	},
+	watch: {
+		tab: function() {
+			if(this.mtab != '#m-architectures-panel') {
+				return;
+			}
+			this.fetch();
+		},
+	},
+};
+</script>
