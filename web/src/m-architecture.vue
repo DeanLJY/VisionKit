@@ -129,3 +129,180 @@
 	</template>
 </div>
 </template>
+
+<script>
+import utils from './utils.js';
+import ArchInputModal from './m-architecture-input-modal.vue';
+
+export default {
+	components: {
+		'm-architecture-input-modal': ArchInputModal,
+	},
+	data: function() {
+		return {
+			arch: null,
+			numInputs: '',
+			numTargets: '',
+			components: [],
+			losses: [],
+			scores: [],
+
+			addComponentForm: null,
+			addLossForm: null,
+			addScoreForm: null,
+
+			// parameters for m-architecture-input-modal
+			addInputModal: null,
+
+			comps: {},
+		};
+	},
+	created: function() {
+		this.resetForm();
+
+		utils.request(this, 'GET', '/pytorch/components', null, (comps) => {
+			comps.forEach((comp) => {
+				this.$set(this.comps, comp.ID, comp);
+			});
+		});
+
+		const archID = this.$route.params.archid;
+		utils.request(this, 'GET', '/pytorch/archs/'+archID, null, (arch) => {
+			this.arch = arch;
+			const params = this.arch.Params;
+			this.numInputs = params.NumInputs;
+			this.numTargets = params.NumTargets;
+			if(params.Components) {
+				this.components = params.Components;
+			}
+			if(params.Losses) {
+				this.losses = params.Losses;
+			}
+			if(params.Scores) {
+				this.scores = params.Scores;
+			}
+		});
+	},
+	methods: {
+		resetForm: function() {
+			this.addComponentForm = {
+				componentID: '',
+			};
+			this.addLossForm = {
+				componentIdx: '',
+				layer: '',
+				weight: 1.0,
+			};
+			this.addScoreForm = {
+				componentIdx: '',
+				layer: '',
+				weight: 1.0,
+			};
+		},
+		save: function() {
+			let params = {
+				NumInputs: parseInt(this.numInputs),
+				NumTargets: parseInt(this.numTargets),
+				Components: this.components,
+				Losses: this.losses,
+				Scores: this.scores,
+			};
+			utils.request(this, 'POST', '/pytorch/archs/'+this.arch.ID, JSON.stringify({
+				Params: params,
+			}), () => {
+				this.$router.push('/ws/'+this.$route.params.ws+'/models');
+			});
+		},
+		addComponent: function() {
+			this.components.push({
+				ID: this.addComponentForm.componentID,
+				Params: '',
+				Inputs: [],
+				Targets: [],
+			});
+			this.resetForm();
+		},
+		removeComponent: function(i) {
+			this.components.splice(i, 1);
+		},
+		addLoss: function(list, form) {
+			list.push({
+				ComponentIdx: parseInt(form.componentIdx),
+				Layer: form.layer,
+				Weight: form.weight,
+			});
+			this.resetForm();
+		},
+		removeLoss: function(list, i) {
+			list.splice(i, 1);
+		},
+
+		showAddInputModal: function(compIdx, mode) {
+			let modalSpec = {
+				componentIdx: compIdx,
+				mode: mode,
+			};
+
+			if(this.addInputModal) {
+				this.addInputModal = null;
+				Vue.nextTick(() => {
+					this.addInputModal = modalSpec;
+				});
+			} else {
+				this.addInputModal = modalSpec;
+			}
+		},
+
+		// return from m-architecture-input-modal
+		addInput: function(e) {
+			let compSpec = this.components[this.addInputModal.componentIdx];
+			if(this.addInputModal.mode == 'inputs') {
+				compSpec.Inputs.push(e);
+			} else if(this.addInputModal.mode == 'targets') {
+				compSpec.Targets.push(e);
+			}
+
+			this.addInputModal = null;
+		},
+
+		removeInput: function(compIdx, i) {
+			this.components[compIdx].Inputs.splice(i, 1);
+		},
+		removeTarget: function(compIdx, i) {
+			this.components[compIdx].Targets.splice(i, 1);
+		},
+
+		parentComponentList: function(compIdx) {
+			let comps = [];
+			this.components.slice(0, compIdx).forEach((compSpec) => {
+				comps.push(this.comps[compSpec.ID]);
+			});
+			return comps;
+		},
+		getComponent: function(compIdx) {
+			if(compIdx === '') {
+				return null;
+			}
+			compIdx = parseInt(compIdx);
+			if(compIdx >= this.components.length) {
+				return null;
+			}
+			let compID = this.components[compIdx].ID;
+			return this.comps[compID];
+		},
+	},
+	computed: {
+		lossAndScore: function() {
+			return [{
+				label: 'Losses',
+				list: this.losses,
+				form: this.addLossForm,
+			}, {
+				label: 'Scores',
+				list: this.scores,
+				form: this.addScoreForm,
+			}];
+		},
+	},
+};
+</script>
