@@ -116,4 +116,18 @@ export default {
 			// done so that the user doesn't have to wait a long time for training to
 			// complete if they are satisfied with the model performance.
 			// This is NOT recommended since it breaks the (non-deterministic)
-			// reproducibility of pipelines, but it se
+			// reproducibility of pipelines, but it seems important for users to have
+			// this option.
+			const jobID = this.job.ID;
+			const nodeID = this.job.Metadata;
+			// run an anonymous async function
+			(async () => {
+				console.log('[stop-training]', 'stopping job ' + this.job.Name);
+				await utils.request(this, 'POST', '/jobs/'+jobID+'/stop');
+				console.log('[stop-training]', 'marking outputs of node ' + nodeID + ' as done');
+				await utils.request(this, 'POST', '/exec-nodes/'+nodeID+'/set-done');
+			})();
+		},
+	},
+};
+</script>
