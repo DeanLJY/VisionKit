@@ -58,4 +58,35 @@ export default {
 	},
 	methods: {
 		fetch: function() {
-			utils.request(this, 'GET', '/pytorch/components'
+			utils.request(this, 'GET', '/pytorch/components', null, (data) => {
+				this.comps = data;
+			});
+		},
+		showAddModal: function() {
+			this.addForm = {
+				id: '',
+			};
+			$(this.$refs.addModal).modal('show');
+		},
+		add: function() {
+			utils.request(this, 'POST', '/pytorch/components', this.addForm, () => {
+				$(this.$refs.addModal).modal('hide');
+				this.fetch();
+			});
+		},
+		deleteComp: function(compID) {
+			utils.request(this, 'DELETE', '/pytorch/components/'+compID, null, () => {
+				this.fetch();
+			});
+		},
+	},
+	watch: {
+		tab: function() {
+			if(this.mtab != '#m-components-panel') {
+				return;
+			}
+			this.fetch();
+		},
+	},
+};
+</script>
