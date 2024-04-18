@@ -15,4 +15,31 @@
 		<div class="tab-pane fade" id="m-architectures-panel" role="tabpanel">
 			<m-architectures :mtab="mtab"></m-architectures>
 		</div>
-	<
+	</div>
+</div>
+</template>
+
+<script>
+import MComponents from './m-components.vue';
+import MArchitectures from './m-architectures.vue';
+
+const Models = {
+	components: {
+		'm-components': MComponents,
+		'm-architectures': MArchitectures,
+	},
+	data: function() {
+		return {
+			mtab: '',
+		};
+	},
+	mounted: function() {
+		this.mtab = $('#m-nav a[data-toggle="tab"].active').attr('href');
+		$('#m-nav a[data-toggle="tab"]').on('shown.bs.tab', (e) => {
+			var target = $(e.target).attr('href');
+			this.mtab = target;
+		});
+	},
+};
+export default Models;
+</script>
