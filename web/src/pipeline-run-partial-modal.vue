@@ -38,4 +38,48 @@
 							<div class="col-sm-8">
 								<select v-model="optionIdx" class="form-select" required>
 									<template v-for="(opt, idx) in options">
-										<optio
+										<option :value="idx">{{ opt.Label }}</option>
+									</template>
+								</select>
+							</div>
+						</div>
+					</template>
+					<template v-if="mode == 'direct'">
+						<div class="form-group row">
+							<label class="col-sm-4 col-form-label">Keys</label>
+							<div class="col-sm-8">
+								<table class="table">
+									<thead>
+										<tr>
+											<th>Key</th>
+											<th></th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr v-for="(key, i) in keys" :key="key">
+											<td>{{ key }}</td>
+											<td>
+												<button type="button" class="btn btn-danger" v-on:click="removeKey(i)">Remove</button>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<input type="text" class="form-control" v-model="addKeyInput" />
+											</td>
+											<td>
+												<button type="button" class="btn btn-primary" v-on:click="addKey">Add</button>
+											</td>
+										</tr>
+									</tbody>
+								</table>
+								<small class="form-text text-muted">
+									The specific keys to sample.
+								</small>
+							</div>
+						</div>
+					</template>
+					<div class="form-group row">
+						<div class="col-sm-8">
+							<button type="submit" class="btn btn-primary">Run Node Partially</button>
+						</div>
+		
