@@ -82,4 +82,62 @@
 						<div class="col-sm-8">
 							<button type="submit" class="btn btn-primary">Run Node Partially</button>
 						</div>
-		
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+</template>
+
+<script>
+import utils from './utils.js';
+import get_parent_options from './get-parent-options.js';
+
+export default {
+	data: function() {
+		return {
+			// Partial execution mode, one of 'random', 'dataset', or 'direct'.
+			mode: 'random',
+			// If mode=='random', the number of output items to compute.
+			count: 4,
+			// If mode=='dataset', the dataset specifying the keys to compute.
+			// this.options[optionIdx] is an ExecParent object.
+			optionIdx: null,
+			// If mode=='direct', the list of keys to compute.
+			keys: [],
+
+			// List of parent options for mode=='dataset' selection.
+			options: [],
+			// If mode=='direct', this provides input value for adding new key to this.keys.
+			addKeyInput: '',
+		};
+	},
+	props: [
+		// The selected node that we want to run.
+		'node',
+	],
+	created: function() {
+		// Populate this.options.
+		get_parent_options(this.$route.params.ws, this, (options) => {
+			this.options = options;
+		});
+	},
+	mounted: function() {
+		$(this.$refs.modal).modal('show');
+	},
+	methods: {
+		execute: function() {
+			let params;
+			if(this.mode == 'dataset') {
+				params = {
+					Mode: 'dataset',
+					ParentSpec: this.options[this.optionIdx],
+				};
+			} else {
+				params = {
+					Mode: this.mode,
+					Count: this.count,
+					Keys: this.keys,
+				};
+			
