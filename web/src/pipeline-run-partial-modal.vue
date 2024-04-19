@@ -140,4 +140,32 @@ export default {
 					Count: this.count,
 					Keys: this.keys,
 				};
-			
+			}
+
+			(async () => {
+				let job = null;
+				try {
+					job = await utils.request(this, 'POST', '/exec-nodes/'+this.node.ID+'/incremental', JSON.stringify(params));
+				} catch(e) {
+					console.log('error running incrementally', e);
+					this.$globals.app.setError(e.responseText);
+				}
+				$(this.$refs.modal).modal('hide');
+				this.$emit('closed');
+				if(!job) {
+					return;
+				}
+				this.$router.push('/ws/'+this.$route.params.ws+'/jobs/'+job.ID);
+			})();
+		},
+
+		addKey: function() {
+			this.keys.push(this.addKeyInput);
+			this.addKeyInput = '';
+		},
+		removeKey: function(i) {
+			this.keys.splice(i, 1);
+		},
+	},
+};
+</script>
