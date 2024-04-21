@@ -33,4 +33,35 @@ function request(comp, method, endpoint, params, successFunc, completeFunc, opts
 			args.dataType = opts.dataType;
 		}
 		if(opts.error) {
-			// override the error handler we
+			// override the error handler we set above
+			args.error = opts.error;
+		}
+	}
+	return $.ajax(args);
+}
+
+// Returns Promise that waits for a job to complete before proceeding.
+function waitForJob(jobID) {
+	return new Promise((resolve, reject) => {
+		let interval;
+		let checkFunc = () => {
+			request(this, 'GET', '/jobs/'+jobID, null, (job) => {
+				if(!job.Done) {
+					return;
+				}
+				clearInterval(interval);
+				if(job.Error) {
+					reject(job);
+					return;
+				}
+				resolve(job);
+			});
+		};
+		interval = setInterval(checkFunc, 1000);
+	});
+};
+
+export default {
+	request: request,
+	waitForJob: waitForJob,
+};
